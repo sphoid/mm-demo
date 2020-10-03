@@ -238,10 +238,10 @@ class Player(pygame.sprite.Sprite):
 	def get_spritesheet_filename(self):
 		return 'megaman-sprites.png'
 
-	def get_sprite_width(self):
+	def get_width(self):
 		return self.rect.width
 
-	def get_sprite_height(self):
+	def get_height(self):
 		return self.rect.height
 
 	def accelerate(self, x, y):
@@ -289,11 +289,7 @@ class Player(pygame.sprite.Sprite):
 	def set_stage(self, stage):
 		self.stage = stage
 		start_position = self.stage.get_start_position()
-		self.move(start_position[0], start_position[1] - self.get_sprite_height())
-
-	# def get_animation(self, animation_key):
-	# 	animation = self.animations[animation_key]
-
+		self.move(start_position[0], start_position[1] - self.get_height())
 
 	def check_collision(self):
 		tile_collide_list = pygame.sprite.spritecollide(self, self.stage.tile_sprite_group, False)
@@ -317,9 +313,14 @@ class Player(pygame.sprite.Sprite):
 					self.position[0] = x - self.rect.width
 			elif self.velocity.x < 0:
 				x = max(map((lambda tile: tile.rect.right), tile_collide_list))
-				if x > self.rect.left:
+				if x > self.position[0]:
 					self.stop_x()
 					self.position[0] = x
+		else:
+			if self.position[0] < 0:
+				self.position[0] = 0
+			elif self.position[0] + self.rect.width > self.area.width:
+				self.position[0] = self.area.width - self.rect.width
 
 	def apply_gravity(self):
 		tiles_below = list(filter((lambda tile: tile.rect.left >= self.position[0] and tile.rect.left <= (self.position[0] + self.rect.width)), self.stage.tile_sprite_group))
@@ -340,36 +341,18 @@ class Player(pygame.sprite.Sprite):
 
 		if self.velocity.y != 0:
 			animation = self.animations['jump_right'] if self.direction == 1 else self.animations['jump_left']
-			# self.images = self.jump_sprites_right if self.direction == 1 else self.jump_sprites_left
-			# animation_time = self.jump_animation_time
 		elif self.velocity.x != 0:
 			animation = self.animations['walk_right'] if self.direction == 1 else self.animations['walk_left']
-			# self.images = self.walk_sprites_right if self.direction == 1 else self.walk_sprites_left
-			# animation_time = self.walk_animation_time
 		else:
 			animation = self.animations['still_right'] if self.direction == 1 else self.animations['still_left']
-			# self.images = self.still_sprites_right if self.direction == 1 else self.still_sprites_left
 
 			if self.stopping:
 				animation.reset()
-
-			# if self.stopping:
-				# animation_time = 0
-				# self.sprite_index = 0
-				# self.stopping = False
-			# else:
-				# animation_time = self.blink_animation_time if self.sprite_index == 1 else self.wait_animation_time
 
 		self.current_time += delta
 		if self.current_time >= animation.next_time:
 			self.image = animation.next(0)['image']
 			self.current_time = 0
-
-		# if self.current_time >= animation_time:
-			# self.current_time = 0
-
-			# self.sprite_index = (self.sprite_index + 1) % len(self.images)
-			# self.image = self.images[self.sprite_index]
 
 		self.position = [self.position[0] + self.velocity.x, self.position[1] + self.velocity.y]
 		self.rect.topleft = self.position
