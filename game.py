@@ -190,7 +190,6 @@ class Player(pygame.sprite.Sprite):
 		self.max_width = 48
 
 		self.current_time = 0
-		self.moving = False
 		self.stopping = False
 		self.falling = True
 
@@ -267,20 +266,17 @@ class Player(pygame.sprite.Sprite):
 
 	def move_right(self):
 		self.direction = 1
-		self.moving = True
 		self.accelerate(self.speed, 0)
 
 	def move_left(self):
 		self.direction = 0
-		self.moving = True
 		self.accelerate(-self.speed, 0)
 
 	def stop_x(self):
 		self.set_velocity_x(0)
-		self.stopping = True
+
 	def stop_y(self):
 		self.set_velocity_y(0)
-		self.stopping = True
 
 	def jump(self):
 		if not self.falling:
@@ -303,9 +299,10 @@ class Player(pygame.sprite.Sprite):
 					self.stopping = True
 			elif self.velocity.y < 0:
 				y = reduce((lambda y, tile: tile.rect.bottom if tile.rect.bottom > y else y), tile_collide_list, 0)
-				if y > self.rect.top:
+				if y > self.position[1]:
 					self.stop_y()
 					self.position[1] = y
+					self.falling = True
 			elif self.velocity.x > 0:
 				x = min(map((lambda tile: tile.rect.left), tile_collide_list))
 				if x < self.position[0] + self.rect.width:
@@ -392,9 +389,6 @@ class Stage:
 
 	def load(self):
 		self.load_map()
-
-		# start_position = self.get_start_position()
-		# self.player.move(start_position[0], start_position[1] - self.player.get_sprite_height())
 
 	def update(self, delta):
 		self.tile_sprite_group.update(delta)
