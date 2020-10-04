@@ -23,6 +23,8 @@ SPRITE_CHARACTER = 'character'
 FPS = 60
 SCREEN_W = 800
 SCREEN_H = 800
+TILE_WIDTH = 16
+TILE_HEIGHT = 16
 
 SCALE2X = False
 
@@ -176,9 +178,27 @@ class SpriteSheetLoader:
 		image, rect = self.loader.load_image(filename)
 		return SpriteSheet(image, rect)
 
-class Player(pygame.sprite.Sprite):
-	def __init__(self, spritesheet_loader):
+
+class TileSprite(pygame.sprite.Sprite):
+	def __init__(self, image, x, y, map_rect):
 		super().__init__()
+		self.image = image
+		self.rect = image.get_rect()
+		self.x = x
+		self.y = y
+		self.map_rect = map_rect
+
+	def update(self, delta):
+		self.rect.topleft = ((self.x * TILE_WIDTH) + self.map_rect.left), ((self.y * TILE_HEIGHT) + self.map_rect.top)
+
+class PlayerSprite(pygame.sprite.Sprite):
+	def __init__(self, image):
+		super().__init__()
+		self.image = image
+		self.rect = image.get_rect()
+
+class Player:
+	def __init__(self, spritesheet_loader):
 		self.spritesheet_loader = spritesheet_loader
 		self.speed = 5
 		self.jump_speed = 10
@@ -195,7 +215,9 @@ class Player(pygame.sprite.Sprite):
 
 		self.stage = None
 
-		self.area = pygame.Rect(0, 0, SCREEN_W / 2, SCREEN_H / 2)
+		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
+
+		self.player_sprite_group = pygame.sprite.Group()
 
 		self.load_sprites()
 
@@ -205,11 +227,11 @@ class Player(pygame.sprite.Sprite):
 
 		self.animations = dict(
 			still_left=Animation([
-				dict(duration=1, image=image_at(Rect((0, 8), (24, 24)), -1)),
+				dict(duration=2, image=image_at(Rect((0, 8), (24, 24)), -1)),
 				dict(duration=0.1, image=image_at(Rect((25, 8), (24, 24)), -1))
 			]),
 			still_right=Animation([
-				dict(duration=1, image=image_at(Rect((0, 8), (24, 24)), -1, flip=True)),
+				dict(duration=2, image=image_at(Rect((0, 8), (24, 24)), -1, flip=True)),
 				dict(duration=0.1, image=image_at(Rect((25, 8), (24, 24)), -1, flip=True))
 			]),
 			walk_left=Animation([
@@ -231,17 +253,47 @@ class Player(pygame.sprite.Sprite):
 		)
 
 		start_frame = self.animations['still_right'].current() if self.direction == 1 else  self.animations['still_left'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
+		self.sprite = PlayerSprite(start_frame['image'])
+		self.player_sprite_group.add(self.sprite)
 
 	def get_spritesheet_filename(self):
 		return 'megaman-sprites.png'
 
 	def get_width(self):
-		return self.rect.width
+		return self.sprite.rect.width
 
 	def get_height(self):
-		return self.rect.height
+		return self.sprite.rect.height
+
+	def get_map_x(self):
+		return self.position[0]
+
+	def set_map_x(self, x):
+		self.position[0] = round(x)
+
+	def set_map_y(self, y):
+		self.position[1] = round(y)
+
+	def get_map_y(self):
+		return self.position[1]
+
+	def set_map_position(self, x, y):
+		self.position = round(x), round(y)
+
+	def get_screen_x(self):
+		return self.sprite.rect.left
+
+	def set_screen_x(self, x):
+		self.sprite.rect.left = round(x)
+
+	def set_screen_position(self, x, y):
+		self.sprite.rect.topleft = round(x), round(y)
+
+	def get_screen_y(self):
+		return self.sprite.rect.top
+
+	def set_screen_y(self, y):
+		self.sprite.rect.top = round(y)
 
 	def accelerate(self, x, y):
 		self.velocity.x += x
@@ -274,6 +326,7 @@ class Player(pygame.sprite.Sprite):
 
 	def stop_x(self):
 		self.set_velocity_x(0)
+		self.stopping = True
 
 	def stop_y(self):
 		self.set_velocity_y(0)
@@ -283,47 +336,53 @@ class Player(pygame.sprite.Sprite):
 			self.accelerate(0, -self.jump_speed)
 
 	def set_stage(self, stage):
+		stage.set_player(self)
+
 		self.stage = stage
 		start_position = self.stage.get_start_position()
 		self.move(start_position[0], start_position[1] - self.get_height())
 
 	def check_collision(self):
-		tile_collide_list = pygame.sprite.spritecollide(self, self.stage.tile_sprite_group, False)
+		tile_collide_list = pygame.sprite.spritecollide(self.sprite, self.stage.tile_sprite_group, False)
 		if len(tile_collide_list) > 0:
 			if self.velocity.y > 0:
 				y = reduce((lambda y, tile: tile.rect.top if tile.rect.top < y else y), tile_collide_list, self.area.height)
-				if y < self.rect.bottom:
+				if y < self.get_map_y() + self.get_height():
 					self.stop_y()
-					self.position[1] = y - self.rect.height
+					self.set_map_y(y - self.get_height())
 					self.falling = False
 					self.stopping = True
 			elif self.velocity.y < 0:
 				y = reduce((lambda y, tile: tile.rect.bottom if tile.rect.bottom > y else y), tile_collide_list, 0)
-				if y > self.position[1]:
+				if y > self.get_map_y():
 					self.stop_y()
-					self.position[1] = y
+					self.set_map_y(y)
 					self.falling = True
 			elif self.velocity.x > 0:
 				x = min(map((lambda tile: tile.rect.left), tile_collide_list))
-				if x < self.position[0] + self.rect.width:
+				if x < self.get_map_x() + self.get_width():
 					self.stop_x()
-					self.position[0] = x - self.rect.width
+					self.set_map_x(x - self.get_width())
 			elif self.velocity.x < 0:
 				x = max(map((lambda tile: tile.rect.right), tile_collide_list))
-				if x > self.position[0]:
+				if x > self.get_map_x():
 					self.stop_x()
-					self.position[0] = x
+					self.set_map_x(x)
 		else:
-			if self.position[0] < 0:
-				self.position[0] = 0
-			elif self.position[0] + self.rect.width > self.area.width:
-				self.position[0] = self.area.width - self.rect.width
+			if self.get_map_x() < 0:
+				self.set_map_x(0)
+			elif self.get_map_x() + self.get_width() > self.area.width:
+				self.set_map_x(self.area.width - self.get_width())
 
 	def apply_gravity(self):
-		tiles_below = list(filter((lambda tile: tile.rect.left >= self.position[0] and tile.rect.left <= (self.position[0] + self.rect.width)), self.stage.tile_sprite_group))
-		nearest_tile_distance = min(map((lambda tile: tile.rect.top - self.rect.bottom), tiles_below))
+		tiles_below = list(filter((lambda tile: tile.rect.left >= self.get_screen_x() and tile.rect.left <= (self.get_screen_x() + self.get_width())), self.stage.tile_sprite_group))
 
-		if nearest_tile_distance > 0:
+		if len(tiles_below) > 0:
+			nearest_tile_distance = min(map((lambda tile: tile.rect.top - (self.get_screen_y() + self.get_height())), tiles_below))
+
+			if nearest_tile_distance > 0:
+				self.falling = True
+		else:
 			self.falling = True
 
 		if self.falling:
@@ -345,52 +404,92 @@ class Player(pygame.sprite.Sprite):
 
 			if self.stopping:
 				animation.reset()
+				self.stopping = False
 
 		self.current_time += delta
 		if self.current_time >= animation.next_time:
-			self.image = animation.next(0)['image']
+			self.sprite.image = animation.next(0)['image']
 			self.current_time = 0
 
-		self.position = [self.position[0] + self.velocity.x, self.position[1] + self.velocity.y]
-		self.rect.topleft = self.position
+		self.position = [self.get_map_x() + self.velocity.x, self.get_map_y() + self.velocity.y]
 
-		# print('frame=%d/%d atime=%.2f velocity=%.2f,%.2f bound=%dx%d pos=%dx%d' % (self.sprite_index, len(self.images), animation_time, self.velocity.x, self.velocity.y, self.rect.width, self.rect.height, self.position[0], self.position[1]))
-
-class Tile(pygame.sprite.Sprite):
-	def __init__(self, image, x, y):
-		super().__init__()
-		self.image = image
-		self.rect = image.get_rect()
-		self.rect.topleft = x * 16, y * 16
+	def draw(self, screen):
+		self.player_sprite_group.draw(screen)
 
 class Stage:
 	def __init__(self, loader):
 		self.tile_height = 32
 		self.tile_width = 32
 		self.loader = loader
+		self.player = None
 		self.map = None
+		self.layer = None
+		self.tiles = []
 
 		self.tile_sprite_group = pygame.sprite.Group()
 
-		self.area = pygame.Rect(0, 0, SCREEN_W / 2, SCREEN_H / 2)
+		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
+		self.center = self.area.width / 2
+		self.rect = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
+
+	def set_player(self, player):
+		self.player = player
 
 	def load_map(self):
 		self.map = self.loader.load_map('test.tmx')
+		self.rect = Rect(0, 0, self.get_map_width(), self.get_map_height())
+		self.layer = self.map.layers[0]
 
-		layer = self.map.layers[0]
-		for x, y, image in layer.tiles():
-			self.tile_sprite_group.add(Tile(image, x, y))
+		for x, y, image in self.layer.tiles():
+			self.tile_sprite_group.add(TileSprite(image, x, y, self.rect))
 
 	def get_background_color(self):
 		return hex_to_rgb(self.map.background_color)
 
+	def get_map_width(self):
+		return self.map.width * self.map.tilewidth
+
+	def get_map_height(self):
+		return self.map.height * self.map.tileheight
+
+	def get_map_screen_x(self):
+		return self.rect.left
+
+	def get_map_screen_y(self):
+		return self.rect.top
+
+	def scroll(self, velocity):
+		vx = round(velocity[0])
+		vy = round(velocity[1])
+
+		self.rect.left -= vx
+		self.rect.top -= vy
+
 	def get_start_position(self):
-		return (10, self.area.height - (self.tile_height * 5))
+		return (10, self.area.height - self.tile_height)
 
 	def load(self):
 		self.load_map()
 
 	def update(self, delta):
+		player_x = self.player.get_map_x()
+		player_y = self.player.get_map_y()
+
+		if self.get_map_width() > self.area.width:
+			right_scroll_threshold = self.center
+			left_scroll_threshold = self.get_map_width() - self.center
+
+			if self.player.velocity.x != 0 and player_x >= right_scroll_threshold and player_x <= left_scroll_threshold:
+				velocity = [self.player.velocity.x, 0]
+				self.scroll(velocity)
+				self.player.set_screen_position(self.player.get_screen_x(), player_y)
+			elif player_x > left_scroll_threshold:
+				self.player.set_screen_position(left_scroll_threshold + (self.get_map_width() - player_x), player_y)
+			elif player_x < right_scroll_threshold:
+				self.player.set_screen_position(player_x, player_y)
+		else:
+			self.player.set_screen_position(player_x, player_y)
+
 		self.tile_sprite_group.update(delta)
 
 	def draw(self, screen):
@@ -404,12 +503,13 @@ class Game:
 		self.spritesheet_loader = SpriteSheetLoader(self.loader)
 		self.mode = MODE_GAME
 		self.clock = pygame.time.Clock()
+		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 
 	def init_screen(self):
 		self.resolution = width, height = self.config.get_screen_resolution()
 		self.logger.debug('resolution: %dx%d' % (width, height))
 		self.screen = pygame.display.set_mode(self.resolution, pygame.HWSURFACE|pygame.DOUBLEBUF)
-		self.buffer = pygame.Surface((SCREEN_W/2, SCREEN_H/2))
+		self.buffer = pygame.Surface((round(SCREEN_W/2), round(SCREEN_H/2)))
 
 	def init_stage(self):
 		self.stage = Stage(self.loader)
@@ -417,20 +517,21 @@ class Game:
 
 	def init_player(self):
 		self.player = Player(self.spritesheet_loader)
-		self.sprites = pygame.sprite.Group((self.player))
 		self.player.set_stage(self.stage)
 
 	def render_game(self):
 		delta = self.clock.tick(FPS) / 1000
 
-		self.sprites.update(delta)
+		self.player.update(delta)
 		self.stage.update(delta)
+
+		print('player mpos=%d,%d spos=%d,%d map=%d, %d' % (self.player.get_map_x(), self.player.get_map_y(), self.player.get_screen_x(), self.player.get_screen_y(), self.stage.get_map_screen_x(), self.stage.get_map_screen_y()))
 
 		background_color = self.config.get_background_color()
 		background_color = self.stage.get_background_color()
 
 		self.buffer.fill(background_color)
-		self.sprites.draw(self.buffer)
+		self.player.draw(self.buffer)
 		self.stage.draw(self.buffer)
 
 		self.screen.blit(pygame.transform.scale2x(self.buffer), (0, 0))
