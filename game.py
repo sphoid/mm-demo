@@ -485,7 +485,7 @@ class Player(pygame.sprite.Sprite):
 		self.position.x += v.x
 		self.position.y += v.y
 
-	def check_collision(self, tile_sprite_group, max_x, map_offset):
+	def check_collision(self, tile_sprite_group, max_x):
 		tile_collide_list = pygame.sprite.spritecollide(self, tile_sprite_group, False)
 		if len(tile_collide_list) > 0:
 			v = self.velocity
@@ -498,12 +498,12 @@ class Player(pygame.sprite.Sprite):
 					print('collision TOP tile_y=%d top=%d pos=%d,%d'%(tile.get_top(), self.get_top(), p.x, p.y))
 					self.collide_top(tile.get_bottom())
 
-				if v.x > 0 and (tile.get_left() + map_offset) < self.get_right() and tile.get_top() < self.get_bottom():
-					print('collision RIGHT tile_x=%d right=%d pos=%d,%d offset=%d'%(tile.get_left() + map_offset, self.get_right(), p.x, p.y, map_offset))
-					self.collide_right(tile.get_left() + map_offset)
-				elif v.x < 0 and (tile.get_right() + map_offset) > self.get_left() and (tile.get_bottom() > self.get_top() or tile.get_top() < self.get_bottom()):
-					print('collision LEFT tile_x=%d left=%d pos=%d,%d offset=%d'%(tile.get_right() + map_offset, self.get_left(), p.x, p.y, map_offset))
-					self.collide_left(tile.get_right() + map_offset)
+				if v.x > 0 and tile.get_left() < self.get_right() and tile.get_top() < self.get_bottom():
+					print('collision RIGHT tile_left=%d right=%d pos=%d,%d'%(tile.get_left(), self.get_right(), p.x, p.y))
+					self.collide_right(tile.get_left())
+				elif v.x < 0 and tile.get_right() > self.get_left() and (tile.get_bottom() > self.get_top() or tile.get_top() < self.get_bottom()):
+					print('collision LEFT tile_right=%d left=%d pos=%d,%d'%(tile.get_right(), self.get_left(), p.x, p.y))
+					self.collide_left(tile.get_right())
 		else:
 			if self.get_left() < 0:
 				self.collide_left(0)
@@ -602,7 +602,7 @@ class Game:
 
 		player.update_position()
 		stage.update_scroll_offset(player.get_position())
-		player.check_collision(stage.tile_sprite_group, mw, stage.get_scroll_offset())
+		player.check_collision(stage.tile_sprite_group, mw)
 
 		sprites.update(delta)
 		stage.update(delta)
