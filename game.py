@@ -305,11 +305,11 @@ class Stage:
 		if player_position.x > right_scroll_threshold and player_position.x < left_scroll_threshold:
 			self.scroll_offset = -(player_position.x - right_scroll_threshold)
 		elif player_position.x >= left_scroll_threshold:
-			self.scroll_offset = -(w + a.width)
+			self.scroll_offset = -(w - a.width)
 		elif player_position.x <= right_scroll_threshold:
 			self.scroll_offset = 0
 
-		# print('Stage scroll_offset=%d'%self.scroll_offset)
+		# print('area_width=%d map_width=%d scroll_offset=%d'%(a.width, w, self.scroll_offset))
 
 	def update(self, delta):
 		self.tile_sprite_group.update(delta)
