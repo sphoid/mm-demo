@@ -9,17 +9,13 @@ WARN = 4
 ERROR = 8
 FATAL = 16
 
-TYPE_INTEGER = 'integer'
-TYPE_FLOAT = 'float'
-TYPE_STRING = 'string'
-TYPE_OBJECT = 'object'
-
 MODE_MENU = 'menu'
 MODE_GAME = 'game'
 MODE_PAUSE = 'pause'
+MODE_GAME_OVER = 'game_over'
 
-SPRITE_CHARACTER = 'character'
-
+TITLE_FONT_SIZE = 16
+PROMPT_FONT_SIZE = 12
 FPS = 60
 SCREEN_W = 800
 SCREEN_H = 800
@@ -52,18 +48,6 @@ class GameConfig:
 	def get_screen_resolution(self):
 		return SCREEN_W, SCREEN_H
 
-	def get_data_path(self):
-		return "data"
-
-	def get_images_path(self):
-		return self.get_data_path() + '/images'
-
-	def get_background_color(self):
-		return 0, 0, 0
-
-	def get_animation_speed(self):
-		return [1, 1]
-
 class Logger:
 	def __init__(self, log_level):
 		self.log_level = log_level
@@ -95,6 +79,15 @@ class ResourceLoader:
 	def __init__(self, config, logger):
 		self.config = config
 		self.logger = logger
+
+	def load_font(self, filename, size):
+		filepath = os.path.join('data', 'fonts', filename)
+
+		try:
+			return pygame.font.Font(filepath, size)
+		except pygame.error as message:
+			self.logger.error('Cannot load font: %s' %(filename))
+			raise SystemExit(message)
 
 	def load_map(self, filename):
 		filepath = os.path.join('maps', filename)
@@ -326,6 +319,7 @@ class Player(pygame.sprite.Sprite):
 		self.direction = 1
 		self.velocity = pygame.math.Vector2(0, 0)
 		self.position = pygame.math.Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
+		self.dead = False
 
 		self.max_height = 48
 		self.max_width = 48
@@ -333,6 +327,8 @@ class Player(pygame.sprite.Sprite):
 		self.current_time = 0
 		self.stopping = False
 		self.falling = True
+		self.teleporting = True
+		self.arriving = False
 
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 		self.map_size = None
@@ -367,6 +363,13 @@ class Player(pygame.sprite.Sprite):
 			]),
 			jump_right=Animation([
 				dict(duration=0, image=image_at(Rect((194, 0), (26, 30)), -1, flip=True))
+			]),
+			teleport=Animation([
+				dict(duration=0, image=image_at(Rect((670, 0), (8, 32)), -1))
+			]),
+			teleport_arrive=Animation([
+				dict(duration=0.1, image=image_at(Rect((680, 0), (24, 32)), -1)),
+				dict(duration=0.1, image=image_at(Rect((705, 0), (24, 32)), -1))
 			])
 		)
 
@@ -379,6 +382,9 @@ class Player(pygame.sprite.Sprite):
 
 	def get_spritesheet_filename(self):
 		return 'megaman-sprites.png'
+
+	def is_dead(self):
+		return self.dead
 
 	def get_width(self):
 		return PLAYER_WIDTH
@@ -408,8 +414,18 @@ class Player(pygame.sprite.Sprite):
 	def collide_bottom(self, y):
 		self.velocity.y = 0
 		self.position.y = y - PLAYER_HALF_HEIGHT
-		self.falling = False
-		self.stopping = True
+
+
+		if self.teleporting:
+			self.teleporting = False
+			self.arriving = True
+			self.stopping = True
+		elif self.arriving:
+			self.arriving = False
+			self.stopping =True
+		else:
+			self.falling = False
+			self.stopping = True
 
 		print('collide_bottom new pos=%d,%d'%(self.position.x, self.position.y))
 
@@ -485,6 +501,12 @@ class Player(pygame.sprite.Sprite):
 		self.position.x += v.x
 		self.position.y += v.y
 
+	def update_status(self):
+		p = self.get_position()
+		a = self.area
+		if p.y > a.height:
+			self.dead = True
+
 	def check_collision(self, tile_sprite_group, max_x):
 		tile_collide_list = pygame.sprite.spritecollide(self, tile_sprite_group, False)
 		if len(tile_collide_list) > 0:
@@ -501,8 +523,8 @@ class Player(pygame.sprite.Sprite):
 				if v.x > 0 and tile.get_left() < self.get_right() and tile.get_top() < self.get_bottom():
 					print('collision RIGHT tile_left=%d right=%d pos=%d,%d'%(tile.get_left(), self.get_right(), p.x, p.y))
 					self.collide_right(tile.get_left())
-				elif v.x < 0 and tile.get_right() > self.get_left() and (tile.get_bottom() > self.get_top() or tile.get_top() < self.get_bottom()):
-					print('collision LEFT tile_right=%d left=%d pos=%d,%d'%(tile.get_right(), self.get_left(), p.x, p.y))
+				elif v.x < 0 and tile.get_right() > self.get_left() and tile.get_top() < self.get_bottom():
+					print('collision LEFT tile_right=%d tile_top=%d tile_bottom=%d pleft=%d ptop=%d pbottom=%d pos=%d,%d'%(tile.get_right(), tile.get_top(), tile.get_bottom(), self.get_left(), self.get_top(), self.get_bottom(), p.x, p.y))
 					self.collide_left(tile.get_right())
 		else:
 			if self.get_left() < 0:
@@ -511,18 +533,31 @@ class Player(pygame.sprite.Sprite):
 				self.collide_right(max_x)
 
 	def update(self, delta):
-		v = self.velocity
-
-		if v.y != 0:
-			animation = self.animations['jump_right'] if self.direction == 1 else self.animations['jump_left']
-		elif v.x != 0:
-			animation = self.animations['walk_right'] if self.direction == 1 else self.animations['walk_left']
-		else:
-			animation = self.animations['still_right'] if self.direction == 1 else self.animations['still_left']
+		if self.teleporting:
+			animation = self.animations['teleport']
 
 			if self.stopping:
 				animation.reset()
-				self.stopping = False
+
+		elif self.arriving:
+			animation = self.animations['teleport_arrive']
+
+			if self.stopping:
+				animation.reset()
+
+		else:
+			v = self.velocity
+
+			if v.y != 0:
+				animation = self.animations['jump_right'] if self.direction == 1 else self.animations['jump_left']
+			elif v.x != 0:
+				animation = self.animations['walk_right'] if self.direction == 1 else self.animations['walk_left']
+			else:
+				animation = self.animations['still_right'] if self.direction == 1 else self.animations['still_left']
+
+				if self.stopping:
+					animation.reset()
+					self.stopping = False
 
 		self.current_time += delta
 		if self.current_time >= animation.next_time:
@@ -548,7 +583,7 @@ class Game:
 		self.logger = logger
 		self.loader = loader
 		self.spritesheet_loader = SpriteSheetLoader(self.loader)
-		self.mode = MODE_GAME
+		self.mode = MODE_MENU
 		self.clock = pygame.time.Clock()
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 		self.sprites = pygame.sprite.Group()
@@ -558,6 +593,17 @@ class Game:
 		self.logger.debug('resolution: %dx%d' % (width, height))
 		self.screen = pygame.display.set_mode(self.resolution, pygame.HWSURFACE|pygame.DOUBLEBUF)
 		self.buffer = pygame.Surface((round(SCREEN_W/2), round(SCREEN_H/2)))
+
+	def init_menu(self):
+		self.title_font = self.loader.load_font('megaman_2.ttf', TITLE_FONT_SIZE)
+		self.prompt_font = self.loader.load_font('megaman_2.ttf', PROMPT_FONT_SIZE)
+		self.title = 'Game Demo'
+		self.menu_time = 0
+		self.prompt_blinking = False
+
+	def init_game_over(self):
+		self.game_over_font = self.loader.load_font('megaman_2.ttf', TITLE_FONT_SIZE)
+		self.game_over_time = 0
 
 	def init_player(self):
 		self.player = Player(self.spritesheet_loader)
@@ -584,9 +630,65 @@ class Game:
 			if v.y == 0:
 				p.accelerate(0, 1)
 			elif v.y < TERMINAL_VELOCITY:
-				p.accelerate(0, 0.8)
+				p.accelerate(0, 1)
 			else:
 				p.set_velocity_y(TERMINAL_VELOCITY)
+
+	def render_menu(self):
+		delta = self.clock.tick(FPS) / 1000
+		self.menu_time += delta
+
+		buffer = self.buffer
+		screen = self.screen
+		title_font = self.title_font
+		prompt_font = self.prompt_font
+		title = self.title
+
+		background_color = 0, 0, 0
+		default_font_color = 255, 255, 255
+		buffer.fill(background_color)
+
+		if self.prompt_blinking and self.menu_time >= 0.25:
+			self.menu_time = 0
+			self.prompt_blinking = False
+		elif not self.prompt_blinking and self.menu_time >= 0.5:
+			self.menu_time = 0
+			self.prompt_blinking = True
+
+		if self.prompt_blinking:
+			prompt_font_color = background_color
+		else:
+			prompt_font_color = default_font_color
+
+		title_text = title_font.render(self.title, 0, default_font_color)
+		title_rect = title_text.get_rect(center=(SCREEN_W/2, SCREEN_H/2))
+
+		prompt_text = prompt_font.render('Press Enter to start', 0, prompt_font_color)
+		prompt_rect = prompt_text.get_rect(center=(SCREEN_W/2, (SCREEN_H/2) + 50))
+
+		screen.blit(title_text, title_rect)
+		screen.blit(prompt_text, prompt_rect)
+
+		pygame.display.flip()
+
+	def render_game_over(self):
+		delta = self.clock.tick(FPS) / 1000
+		self.game_over_time += delta
+
+		buffer = self.buffer
+		screen = self.screen
+		game_over_font = self.game_over_font
+
+		background_color = 0, 0, 0
+		default_font_color = 255, 255, 255
+		buffer.fill(background_color)
+
+		game_over_text = game_over_font.render('Game Over', 0, default_font_color)
+		game_over_rect = game_over_text.get_rect(center=(SCREEN_W/2, SCREEN_H/2))
+
+		screen.blit(game_over_text, game_over_rect)
+
+		pygame.display.flip()
 
 	def render_game(self):
 		delta = self.clock.tick(FPS) / 1000
@@ -598,11 +700,14 @@ class Game:
 		player = self.player
 		stage = self.stage
 		area = self.area
+		screen = self.screen
 		mw, mh = stage.get_map_size()
 
 		player.update_position()
 		stage.update_scroll_offset(player.get_position())
 		player.check_collision(stage.tile_sprite_group, mw)
+
+		player.update_status()
 
 		sprites.update(delta)
 		stage.update(delta)
@@ -614,15 +719,19 @@ class Game:
 		sprites.draw(buffer)
 		stage.draw(buffer)
 
-		self.screen.blit(pygame.transform.scale2x(buffer), (0, 0))
+		screen.blit(pygame.transform.scale2x(buffer), (0, 0))
 
 		pygame.display.flip()
 
 	def render(self):
 		if self.mode == MODE_GAME:
 			self.render_game()
+		elif self.mode == MODE_MENU:
+			self.render_menu()
 		elif self.mode == MODE_PAUSE:
 			self.render_pause()
+		elif self.mode == MODE_GAME_OVER:
+			self.render_game_over()
 
 	def handle_game_event(self, event):
 		if event.type in (pygame.KEYDOWN, pygame.KEYUP):
@@ -646,10 +755,18 @@ class Game:
 			elif event.key == pygame.K_ESCAPE:
 				self.running = False
 
+	def handle_menu_event(self, event):
+		if event.type in (pygame.KEYDOWN, pygame.KEYUP):
+			if event.key == pygame.K_RETURN:
+				self.start(MODE_GAME)
+			elif event.key == pygame.K_ESCAPE:
+				self.running = False
 
 	def handle_event(self, event):
 		if self.mode == MODE_GAME:
 			self.handle_game_event(event)
+		elif self.mode == MODE_MENU:
+			self.handle_menu_event(event)
 		elif self.mode == MODE_PAUSE:
 			self.handle_pause_event(event)
 
@@ -666,15 +783,24 @@ class Game:
 				self.clock.tick(60)
 				self.render()
 
-	def start(self):
-		pygame.init()
+			if self.mode == MODE_GAME_OVER and self.game_over_time >= 3:
+				self.start(MODE_MENU)
+			elif self.mode == MODE_GAME and self.player.is_dead():
+			 	self.start(MODE_GAME_OVER)
+
+	def start(self, mode):
+		self.mode = mode
 		self.init_screen()
-		self.init_player()
-		self.init_stage()
+
+		if self.mode == MODE_GAME:
+			self.init_player()
+			self.init_stage()
+		elif self.mode == MODE_MENU:
+			self.init_menu()
+		elif self.mode == MODE_GAME_OVER:
+			self.init_game_over()
 
 		self.loop()
-
-		pygame.quit()
 
 def main():
 	if not pygame.font: print('Warning, fonts disabled')
@@ -684,6 +810,8 @@ def main():
 	logger = Logger(DEBUG)
 	loader = ResourceLoader(game_config, logger)
 	game = Game(game_config, logger, loader)
-	game.start()
+	pygame.init()
+	game.start(MODE_MENU)
+	pygame.quit()
 
 main()
