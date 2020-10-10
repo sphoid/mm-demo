@@ -112,7 +112,7 @@ class ResourceLoader:
 
 		return image, image.get_rect()
 
-	def load_audio(self, filename):
+	def load_audio(self, filename, mixer=None):
 		class NoneSound:
 			def play(self): pass
 
@@ -122,7 +122,7 @@ class ResourceLoader:
 		filepath = os.path.join('data', 'audio', filename)
 
 		try:
-			sound = pygame.mixer.Sound(filepath)
+			sound = mixer.Sound(filepath) if mixer else pygame.mixer.Sound(filepath)
 		except pygame.error as message:
 			self.logger.error('Cannot load audio: %s' %(filepath))
 			raise SystemExit(message)
@@ -186,6 +186,31 @@ class SpriteSheetLoader:
 		image, rect = self.loader.load_image(filename)
 		return SpriteSheet(image, rect)
 
+class SoundLibrary:
+	def __init__(self, loader, mixer):
+		self.loader = loader
+		self.sounds = {}
+		self.mixer = mixer
+
+	def load(self):
+		load_audio = self.loader.load_audio
+		self.sounds = dict(
+			start=load_audio('start.wav', self.mixer),
+			defeat=load_audio('defeat.wav', self.mixer),
+			land=load_audio('land.wav', self.mixer),
+			pause=load_audio('pause.wav', self.mixer),
+			warp=load_audio('warp.wav', self.mixer)
+		)
+
+	def play_sound(self, sound, blocking=False):
+		if blocking:
+			channel = self.sounds[sound].play()
+			while channel.get_busy():
+				pygame.time.wait(100)
+		else:
+			self.sounds[sound].play()
+
+
 class Tile(pygame.sprite.Sprite):
 	def __init__(self, image, stage, *grid_position):
 		super().__init__()
@@ -239,6 +264,7 @@ class Stage:
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 		self.center = self.area.width / 2
 		self.map_size = None
+		self.sounds = {}
 
 	def load_map(self):
 		self.map = self.loader.load_map('test.tmx')
@@ -252,6 +278,9 @@ class Stage:
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
 		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
+
+	def load(self):
+		self.load_map()
 
 	def tiles_at(self, x1, x2, y):
 		gridx1 = math.floor(x1 / TILE_WIDTH)
@@ -283,9 +312,6 @@ class Stage:
 	def get_map_height(self):
 		return self.map_size[1]
 
-	def load(self):
-		self.load_map()
-
 	def get_scroll_offset(self):
 		return self.scroll_offset
 
@@ -311,9 +337,10 @@ class Stage:
 		self.tile_sprite_group.draw(surface)
 
 class Player(pygame.sprite.Sprite):
-	def __init__(self, spritesheet_loader):
+	def __init__(self, spritesheet_loader, sounds):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
+		self.sounds = sounds
 		self.speed = 5
 		self.jump_speed = 10
 		self.direction = 1
@@ -423,9 +450,11 @@ class Player(pygame.sprite.Sprite):
 		elif self.arriving:
 			self.arriving = False
 			self.stopping =True
+			self.sounds.play_sound('warp')
 		else:
 			self.falling = False
 			self.stopping = True
+			self.sounds.play_sound('land')
 
 		print('collide_bottom new pos=%d,%d'%(self.position.x, self.position.y))
 
@@ -594,6 +623,11 @@ class Game:
 		self.screen = pygame.display.set_mode(self.resolution, pygame.HWSURFACE|pygame.DOUBLEBUF)
 		self.buffer = pygame.Surface((round(SCREEN_W/2), round(SCREEN_H/2)))
 
+	def init_audio(self):
+		self.mixer = pygame.mixer.init()
+		self.sounds = SoundLibrary(self.loader, self.mixer)
+		self.sounds.load()
+
 	def init_menu(self):
 		self.title_font = self.loader.load_font('megaman_2.ttf', TITLE_FONT_SIZE)
 		self.prompt_font = self.loader.load_font('megaman_2.ttf', PROMPT_FONT_SIZE)
@@ -606,7 +640,7 @@ class Game:
 		self.game_over_time = 0
 
 	def init_player(self):
-		self.player = Player(self.spritesheet_loader)
+		self.player = Player(self.spritesheet_loader, self.sounds)
 		self.sprites.add(self.player)
 
 	def init_stage(self):
@@ -758,6 +792,7 @@ class Game:
 	def handle_menu_event(self, event):
 		if event.type in (pygame.KEYDOWN, pygame.KEYUP):
 			if event.key == pygame.K_RETURN:
+				self.sounds.play_sound('start', True)
 				self.start(MODE_GAME)
 			elif event.key == pygame.K_ESCAPE:
 				self.running = False
@@ -786,11 +821,13 @@ class Game:
 			if self.mode == MODE_GAME_OVER and self.game_over_time >= 3:
 				self.start(MODE_MENU)
 			elif self.mode == MODE_GAME and self.player.is_dead():
-			 	self.start(MODE_GAME_OVER)
+				self.sounds.play_sound('defeat', True)
+				self.start(MODE_GAME_OVER)
 
 	def start(self, mode):
 		self.mode = mode
 		self.init_screen()
+		self.init_audio()
 
 		if self.mode == MODE_GAME:
 			self.init_player()
