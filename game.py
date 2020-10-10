@@ -112,22 +112,31 @@ class ResourceLoader:
 
 		return image, image.get_rect()
 
-	def load_audio(self, filename, mixer=None):
+	def load_sound(self, filename, mixer=None):
 		class NoneSound:
 			def play(self): pass
 
 		if not pygame.mixer:
 			return NoneSound()
 
-		filepath = os.path.join('data', 'audio', filename)
+		filepath = os.path.join('data', 'sounds', filename)
 
 		try:
 			sound = mixer.Sound(filepath) if mixer else pygame.mixer.Sound(filepath)
 		except pygame.error as message:
-			self.logger.error('Cannot load audio: %s' %(filepath))
+			self.logger.error('Cannot load sound: %s' %(filepath))
 			raise SystemExit(message)
 
 		return sound
+
+	def load_song(self, filename):
+		filepath = os.path.join('data', 'songs', filename)
+
+		try:
+			pygame.mixer.music.load(filepath)
+		except pygame.error as message:
+			self.logger.error('Cannot load song: %s' %(filepath))
+			raise SystemExit(message)
 
 class Animation:
 	def __init__(self, frames):
@@ -193,13 +202,13 @@ class SoundLibrary:
 		self.mixer = mixer
 
 	def load(self):
-		load_audio = self.loader.load_audio
+		load_sound = self.loader.load_sound
 		self.sounds = dict(
-			start=load_audio('start.wav', self.mixer),
-			defeat=load_audio('defeat.wav', self.mixer),
-			land=load_audio('land.wav', self.mixer),
-			pause=load_audio('pause.wav', self.mixer),
-			warp=load_audio('warp.wav', self.mixer)
+			start=load_sound('start.wav', self.mixer),
+			defeat=load_sound('defeat.wav', self.mixer),
+			land=load_sound('land.wav', self.mixer),
+			pause=load_sound('pause.wav', self.mixer),
+			warp=load_sound('warp.wav', self.mixer)
 		)
 
 	def play_sound(self, sound, blocking=False):
@@ -209,6 +218,16 @@ class SoundLibrary:
 				pygame.time.wait(100)
 		else:
 			self.sounds[sound].play()
+
+class MusicPlayer:
+	def __init__(self, loader):
+		self.loader = loader
+		self.songs = {}
+
+	def play(self, song):
+		songfile = '%s.mp3'%song
+		self.loader.load_song(songfile)
+		pygame.mixer.music.play(-1)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -627,6 +646,7 @@ class Game:
 		self.mixer = pygame.mixer.init()
 		self.sounds = SoundLibrary(self.loader, self.mixer)
 		self.sounds.load()
+		self.music_player = MusicPlayer(self.loader)
 
 	def init_menu(self):
 		self.title_font = self.loader.load_font('megaman_2.ttf', TITLE_FONT_SIZE)
@@ -648,6 +668,8 @@ class Game:
 		self.stage.load()
 
 		self.player.set_map_size(self.stage.get_map_size())
+
+		self.music_player.play('bombman-stage')
 
 	def apply_gravity(self):
 		p = self.player
