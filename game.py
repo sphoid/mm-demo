@@ -303,16 +303,15 @@ class Stage:
 
 	def tiles_at(self, x1, x2, y):
 		gridx1 = math.floor(x1 / TILE_WIDTH)
-		gridx2 = math.floor(x2 / TILE_WIDTH)
+		gridx2 = math.ceil(x2 / TILE_WIDTH)
 		gridy = math.floor(y / TILE_HEIGHT)
 		tiles = list()
 
-		if gridx1 == gridx2 and (gridx1, gridy) in self.tiles:
-			tiles.add(self.tiles[gridx1, gridy])
-		else:
-			for xpos in [gridx1, gridx2]:
-				if (xpos, gridy) in self.tiles:
-					tiles.append(self.tiles[xpos, gridy])
+		for gridx in range(gridx1, gridx2):
+			if (gridx, gridy) in self.tiles:
+				tile = self.tiles[gridx, gridy]
+				if tile.get_right() > x1  or tile.get_left() < x2:
+					tiles.append(tile)
 
 		return tiles
 
