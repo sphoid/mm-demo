@@ -139,14 +139,18 @@ class ResourceLoader:
 			raise SystemExit(message)
 
 class Animation:
-	def __init__(self, frames):
+	def __init__(self, frames, callback=None):
 		self.frames = frames
 		self.index = 0
 		self.next_time = frames[self.index]['duration']
+		self.callback = callback
 
 	def reset(self):
 		self.index = len(self.frames) - 1
 		self.next_time = 0
+
+		if self.callback is not None:
+			self.callback(self.index)
 
 	def current(self):
 		return self.frames[self.index]
@@ -159,6 +163,9 @@ class Animation:
 
 		next_frame = self.frames[self.index]
 		self.next_time = next_frame['duration'] + last_time
+
+		if self.callback is not None:
+			self.callback(self.index)
 
 		return next_frame
 
@@ -239,12 +246,8 @@ class Tile(pygame.sprite.Sprite):
 		super().__init__()
 		self.image = image
 		self.rect = image.get_rect()
-		# self.grid_position = pygame.math.Vector2(grid_position[0], grid_position[1])
-		# self.position = pygame.math.Vector2(grid_position[0] * TILE_WIDTH, grid_position[1] * TILE_HEIGHT)
 		self.position = pygame.math.Vector2(grid_position[0], grid_position[1])
 		self.stage = stage
-
-		# print('Loaded tile %dx%d pos=%d,%d'%(self.grid_position.x, self.grid_position.y, self.position.x, self.position.y))
 
 	def get_width(self):
 		return TILE_WIDTH
@@ -311,8 +314,8 @@ class Stage:
 	def load_map(self):
 		self.map = self.loader.load_map('level-1.tmx')
 
-		self.load_map_objects('platforms', self.map)
-		self.load_map_objects('ladders', self.map)
+		for object_type in ['platforms', 'ladders']:
+			self.load_map_objects(object_type, self.map)
 
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
@@ -321,25 +324,63 @@ class Stage:
 	def load(self):
 		self.load_map()
 
-	def tiles_at(self, tile_dict, x1, x2, y):
+	def tiles_at_y(self, tile_dict, x1, x2, y):
 		gridx1 = math.floor(x1 / TILE_WIDTH) * TILE_WIDTH
 		gridx2 = math.floor(x2 / TILE_WIDTH) * TILE_WIDTH
 		gridy = math.floor(y / TILE_HEIGHT) * TILE_HEIGHT
 		tiles = list()
 
 		for gridx in range(gridx1, gridx2):
-			if (gridx, gridy) in self.platforms:
+			if (gridx, gridy) in tile_dict:
 				tile = tile_dict[gridx, gridy]
-				if tile.get_right() > x1  or tile.get_left() < x2:
+				if tile.get_right() > x1 or tile.get_left() < x2:
 					tiles.append(tile)
 
 		return tiles
 
-	def platforms_at(self, x1, x2, y):
-		return self.tiles_at(self.platforms, x1, x2, y)
+	def tiles_at_x(self, tile_dict, x, y1, y2):
+		gridx = math.floor(x / TILE_WIDTH) * TILE_WIDTH
+		gridy1 = math.floor(y1 / TILE_HEIGHT) * TILE_HEIGHT
+		gridy2 = math.floor(y2 / TILE_HEIGHT) * TILE_HEIGHT
+		tiles = list()
 
-	def ladders_at(self, x1, x2, y):
-		return self.tiles_at(self.ladders, x1, x2, y)
+		for gridy in range(gridy1, gridy2):
+			if (gridx, gridy) in tile_dict:
+				tile = tile_dict[gridx, gridy]
+				if tile.get_top() > y1 or tile.get_bottom() < y2:
+					tiles.append(tile)
+
+		return tiles
+
+	def platforms_at_y(self, x1, x2, y):
+		return self.tiles_at_y(self.platforms, x1, x2, y)
+
+	def platforms_at_x(self, x, y1, y2):
+		return self.tiles_at_x(self.platforms, x, y1, y2)
+
+	def ladders_at_x(self, x, y1, y2):
+		return self.tiles_at_x(self.ladders, x, y1, y2)
+
+	def ladders_at_y(self, x1, x2, y):
+		return self.tiles_at_y(self.ladders, x1, x2, y)
+
+	# def ladders_above(self, x1, x2, y):
+	# 	tile_dict = self.ladders
+	# 	gridx1 = math.floor(x1 / TILE_WIDTH) * TILE_WIDTH
+	# 	gridx2 = math.floor(x2 / TILE_WIDTH) * TILE_WIDTH
+	# 	gridy = math.floor(y / TILE_HEIGHT) * TILE_HEIGHT + TILE_HEIGHT
+	# 	tiles = list()
+
+	# 	for gridx in range(gridx1, gridx2):
+	# 		if (gridx, gridy) in tile_dict:
+	# 			tile = tile_dict[gridx, gridy]
+	# 			if tile.get_right() > x1 or tile.get_left() < x2:
+	# 				tiles.append(tile)
+
+	# 	return tiles
+
+	# def ladders_above(self, x, y1, y2):
+	# 	return self.tiles_above(self.ladders, x, y1, y2)
 
 	def get_background_color(self):
 		return hex_to_rgb(self.map.background_color)
@@ -384,21 +425,25 @@ class Player(pygame.sprite.Sprite):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 		self.sounds = sounds
-		self.speed = 5
+		self.move_speed = 5
 		self.jump_speed = 10
-		self.direction = 1
-		self.velocity = pygame.math.Vector2(0, 0)
-		self.position = pygame.math.Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
-		self.dead = False
-		self.shooting = False
 
 		self.max_height = 48
 		self.max_width = 48
 
+		self.velocity = pygame.math.Vector2(0, 0)
+		self.position = pygame.math.Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
+
 		self.current_time = 0
+		self.direction = 1
 		self.falling = True
 		self.teleporting = True
 		self.arriving = False
+		self.climbing = False
+		self.climbing_over = False
+		self.climb_hand_side = 1
+		self.dead = False
+		self.shooting = False
 
 		self.reset_animation = False
 
@@ -406,6 +451,9 @@ class Player(pygame.sprite.Sprite):
 		self.map_size = None
 
 		self.load_sprites()
+
+	def toggle_climb_hand_side(self, index):
+		self.climb_hand_side = int(not self.climb_hand_side)
 
 	def load_sprites(self):
 		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
@@ -429,6 +477,19 @@ class Player(pygame.sprite.Sprite):
 				dict(duration=0.05, image=image_at(Rect((80, 8), (24, 24)), -1, flip=True)),
 				dict(duration=0.05, image=image_at(Rect((108, 8), (24, 24)), -1, flip=True)),
 				dict(duration=0.05, image=image_at(Rect((133, 8), (24, 24)), -1, flip=True))
+			]),
+			climb_still_right=Animation([
+				dict(duration=0, image=image_at(Rect((224, 0), (16, 32)), -1)),
+			]),
+			climb_still_left=Animation([
+				dict(duration=0, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True)),
+			]),
+			climb=Animation([
+				dict(duration=0.05, image=image_at(Rect((224, 0), (16, 32)), -1)),
+				dict(duration=0.05, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True)),
+			], self.toggle_climb_hand_side),
+			climb_over=Animation([
+				dict(duration=0, image=image_at(Rect((241, 8), (16, 24)), -1)),
 			]),
 			jump_left=Animation([
 				dict(duration=0, image=image_at(Rect((194, 0), (26, 30)), -1))
@@ -502,6 +563,11 @@ class Player(pygame.sprite.Sprite):
 			self.arriving = False
 			self.reset_animation = True
 			self.sounds.play_sound('warp')
+		elif self.climbing:
+			self.climbing = False
+			self.climbing_over = False
+			self.reset_animation = True
+			self.sounds.play_sound('land')
 		else:
 			self.falling = False
 			self.reset_animation = True
@@ -554,24 +620,63 @@ class Player(pygame.sprite.Sprite):
 
 	def move_right(self):
 		self.direction = 1
-		self.accelerate(self.speed, 0)
+		self.accelerate(self.move_speed, 0)
 
 	def move_left(self):
 		self.direction = 0
-		self.accelerate(-self.speed, 0)
+		self.accelerate(-self.move_speed, 0)
 
 	def stop_x(self):
 		self.set_velocity_x(0)
 		self.reset_animation = True
 
+	def is_climbing(self):
+		return self.climbing
+
+	def is_climbing_over(self):
+		return self.climbing_over
+
+	def grab_ladder(self, x, going_down=False):
+		self.velocity.x = 0
+		self.position.x = x + PLAYER_HALF_WIDTH
+		if going_down:
+			self.position.y += PLAYER_HALF_HEIGHT
+		self.climbing = True
+		self.reset_animation = True
+
+	def climb_over(self):
+		self.climbing_over = True
+		self.reset_animation = True
+
+	def stop_climbing_over(self):
+		self.climbing_over = False
+		self.reset_animation = True
+
+	def climb_off(self, y=None):
+		self.velocity.y = 0
+		if y is not None:
+			self.position.y = y - PLAYER_HALF_HEIGHT
+			print('climb_off: Resetting player_y=%d'%self.position.y)
+		self.climbing = False
+		self.climbing_over = False
+		self.reset_animation = True
+
+
 	def climb_up(self):
-		pass
+		self.accelerate(0, -self.move_speed)
 
 	def climb_down(self):
-		pass
+		self.accelerate(0, self.move_speed)
 
 	def stop_climbing(self):
-		pass
+		self.velocity.y = 0
+		self.reset_animation = True
+
+	def fall(self):
+		self.falling = True
+
+	def is_falling(self):
+		return self.falling
 
 	def jump(self):
 		if not self.falling:
@@ -600,39 +705,21 @@ class Player(pygame.sprite.Sprite):
 		if p.y > a.height:
 			self.die()
 
-	def check_near_ladder(self, tile_sprite_group):
-		tile_collide_list = pygame.sprite.spritecollide(self, tile_sprite_group, False)
-
-	def check_collision(self, tile_sprite_group, max_x):
-		tile_collide_list = pygame.sprite.spritecollide(self, tile_sprite_group, False)
-		if len(tile_collide_list) > 0:
-			v = self.velocity
-			p = self.get_position()
-			for tile in tile_collide_list:
-				if v.y > 0 and tile.get_top() < self.get_bottom():
-					print('collision BOTTOM tile_y=%d bottom=%d pos=%d,%d'%(tile.get_top(), self.get_bottom(), p.x, p.y))
-					self.collide_bottom(tile.get_top())
-				elif v.y < 0 and tile.get_bottom() > self.get_top():
-					print('collision TOP tile_y=%d top=%d pos=%d,%d'%(tile.get_top(), self.get_top(), p.x, p.y))
-					self.collide_top(tile.get_bottom())
-
-				if v.x > 0 and tile.get_left() < self.get_right() and tile.get_top() < self.get_bottom():
-					print('collision RIGHT tile_left=%d right=%d pos=%d,%d'%(tile.get_left(), self.get_right(), p.x, p.y))
-					self.collide_right(tile.get_left())
-				elif v.x < 0 and tile.get_right() > self.get_left() and tile.get_top() < self.get_bottom():
-					print('collision LEFT tile_right=%d tile_top=%d tile_bottom=%d pleft=%d ptop=%d pbottom=%d pos=%d,%d'%(tile.get_right(), tile.get_top(), tile.get_bottom(), self.get_left(), self.get_top(), self.get_bottom(), p.x, p.y))
-					self.collide_left(tile.get_right())
-		else:
-			if self.get_left() < 0:
-				self.collide_left(0)
-			elif self.get_right() > max_x:
-				self.collide_right(max_x)
-
 	def update(self, delta):
 		if self.teleporting:
 			animation = self.animations['teleport']
 		elif self.arriving:
 			animation = self.animations['teleport_arrive']
+		elif self.climbing:
+			if self.climbing_over:
+				animation = self.animations['climb_over']
+			else:
+				v = self.velocity
+
+				if v.y !=0:
+					animation = self.animations['climb']
+				else:
+					animation = self.animations['climb_still_right'] if self.climb_hand_side == 1 else self.animations['climb_still_left']
 		else:
 			v = self.velocity
 
@@ -714,24 +801,50 @@ class Game:
 
 		self.music_player.play('bombman-stage')
 
+	def check_climb(self):
+		player = self.player
+
+		if not player.is_climbing():
+			return
+
+		stage = self.stage
+		ladder_tiles = stage.ladders_at_x(player.get_position().x, player.get_top() - TILE_HEIGHT, player.get_bottom() + TILE_HEIGHT)
+		top_tile = reduce((lambda top_tile, tile: tile if (top_tile is None or tile.get_top() < top_tile.get_top()) else top_tile), ladder_tiles, None)
+
+		if not player.is_climbing_over():
+			if player.get_top() <= top_tile.get_top() and player.get_position().y >= top_tile.get_top():
+				player.climb_over()
+			elif player.get_position().y < top_tile.get_top():
+				player.climb_off(top_tile.get_top())
+		else:
+			if player.get_position().y < top_tile.get_top():
+				player.climb_off(top_tile.get_top())
+			elif player.get_top() > top_tile.get_top():
+				player.stop_climbing_over()
+
 	def apply_gravity(self):
-		p = self.player
-		x1 = p.get_left()
-		x2 = p.get_right()
-		v = p.get_velocity()
-		s = self.stage
-		tiles_below = s.platforms_at(x1, x2, p.get_bottom())
+		player = self.player
 
-		if len(tiles_below) == 0:
-			p.falling = True
+		if player.is_climbing():
+			return
 
-		if p.falling:
+		x1 = player.get_left()
+		x2 = player.get_right()
+		v = player.get_velocity()
+		stage = self.stage
+		platforms_below = stage.platforms_at_y(x1, x2, player.get_bottom())
+		ladders_below = stage.ladders_at_y(x1, x2, player.get_bottom())
+
+		if len(platforms_below) == 0 and len(ladders_below) == 0:
+			player.fall()
+
+		if player.is_falling():
 			if v.y == 0:
-				p.accelerate(0, 1)
+				player.accelerate(0, 1)
 			elif v.y < TERMINAL_VELOCITY:
-				p.accelerate(0, 1)
+				player.accelerate(0, 1)
 			else:
-				p.set_velocity_y(TERMINAL_VELOCITY)
+				player.set_velocity_y(TERMINAL_VELOCITY)
 
 	def render_menu(self):
 		delta = self.clock.tick(FPS) / 1000
@@ -789,14 +902,67 @@ class Game:
 
 		pygame.display.flip()
 
+	def check_tile_collision(self, player):
+		stage = self.stage
+		platform_collide_list = pygame.sprite.spritecollide(player, stage.platform_sprite_group, False)
+		ladder_collide_list = pygame.sprite.spritecollide(player, stage.ladder_sprite_group, False)
+		v = player.get_velocity()
+		if len(platform_collide_list) > 0:
+			p = player.get_position()
+			for tile in platform_collide_list:
+				if v.y > 0 and tile.get_top() < player.get_bottom():
+					print('collision BOTTOM tile_y=%d bottom=%d pos=%d,%d'%(tile.get_top(), player.get_bottom(), p.x, p.y))
+					player.collide_bottom(tile.get_top())
+				elif v.y < 0 and tile.get_bottom() > player.get_top():
+					print('collision TOP tile_y=%d top=%d pos=%d,%d'%(tile.get_top(), player.get_top(), p.x, p.y))
+					player.collide_top(tile.get_bottom())
+
+				if v.x > 0 and tile.get_left() < player.get_right() and tile.get_top() < player.get_bottom():
+					print('collision RIGHT tile_left=%d right=%d pos=%d,%d'%(tile.get_left(), player.get_right(), p.x, p.y))
+					player.collide_right(tile.get_left())
+				elif v.x < 0 and tile.get_right() > player.get_left() and tile.get_top() < player.get_bottom():
+					print('collision LEFT tile_right=%d left=%d pos=%d,%d'%(tile.get_right(), player.get_left(), p.x, p.y))
+					player.collide_left(tile.get_right())
+		elif not player.is_climbing() and len(ladder_collide_list) > 0 and v.y > 0:
+			for tile in ladder_collide_list:
+				if tile.get_top() < player.get_bottom():
+					print('ladder collision tile_top=%d bottom=%d'%(tile.get_top(), player.get_bottom()))
+					player.collide_bottom(tile.get_top())
+		else:
+			mw, mh = stage.get_map_size()
+
+			if player.get_left() < 0:
+				player.collide_left(0)
+			elif player.get_right() > mw:
+				player.collide_right(mw)
+
+	def grab_near_ladder(self, player):
+		stage = self.stage
+		tile_collide_list = pygame.sprite.spritecollide(player, stage.ladder_sprite_group, False)
+		if len(tile_collide_list) > 0:
+			tile = tile_collide_list[0]
+			print('Grabbing ladder behind')
+			player.grab_ladder(tile.get_left())
+			return True
+		else:
+			tiles_below = stage.ladders_at_y(player.get_left(), player.get_right(), player.get_bottom())
+			if len(tiles_below) > 0:
+				tile = tiles_below[0]
+				print('Grabbing ladder below')
+				player.grab_ladder(tile.get_left(), True)
+				return True
+
+			return False
+
 	def render_game(self):
 		delta = self.clock.tick(FPS) / 1000
+		player = self.player
 
+		self.check_climb()
 		self.apply_gravity()
 
 		buffer = self.buffer
 		sprites = self.sprites
-		player = self.player
 		stage = self.stage
 		area = self.area
 		screen = self.screen
@@ -804,7 +970,7 @@ class Game:
 
 		player.update_position()
 		stage.update_scroll_offset(player.get_position())
-		player.check_collision(stage.platform_sprite_group, mw)
+		self.check_tile_collision(player)
 
 		player.update_status()
 
@@ -851,8 +1017,29 @@ class Game:
 			elif event.key == pygame.K_UP:
 				if event.type == pygame.KEYDOWN:
 					self.logger.debug('U Down')
+					if not self.player.is_climbing():
+						grabbed = self.grab_near_ladder(self.player)
+						if grabbed:
+							self.player.climb_up()
+					else:
+						self.player.climb_up()
 				elif event.type == pygame.KEYUP:
 					self.logger.debug('U Up')
+					if self.player.is_climbing():
+						self.player.stop_climbing()
+			elif event.key == pygame.K_DOWN:
+				if event.type == pygame.KEYDOWN:
+					self.logger.debug('D Down')
+					if not self.player.is_climbing():
+						grabbed = self.grab_near_ladder(self.player)
+						if grabbed:
+							self.player.climb_down()
+					else:
+						self.player.climb_down()
+				elif event.type == pygame.KEYUP:
+					self.logger.debug('D Up')
+					if self.player.is_climbing():
+						self.player.stop_climbing()
 			elif event.key == pygame.K_SPACE and event.type == pygame.KEYUP:
 				self.logger.debug('Space')
 				self.player.jump()
