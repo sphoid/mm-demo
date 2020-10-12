@@ -416,6 +416,7 @@ class Player(pygame.sprite.Sprite):
 		self.spritesheet_loader = spritesheet_loader
 		self.sounds = sounds
 		self.move_speed = 5
+		self.climb_speed = 3
 		self.jump_speed = 10
 
 		self.max_height = 48
@@ -658,10 +659,10 @@ class Player(pygame.sprite.Sprite):
 
 
 	def climb_up(self):
-		self.accelerate(0, -self.move_speed)
+		self.accelerate(0, -self.climb_speed)
 
 	def climb_down(self):
-		self.accelerate(0, self.move_speed)
+		self.accelerate(0, self.climb_speed)
 
 	def stop_climbing(self):
 		self.velocity.y = 0
