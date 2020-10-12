@@ -409,6 +409,60 @@ class Stage:
 			for ladder in self.ladders.values():
 				pygame.draw.rect(surface, (255,0,0), ladder.rect)
 
+class Pew(pygame.sprite.Sprite):
+	def __init__(self, image, direction, *position):
+		super().__init__()
+		self.image = image
+		self.rect = image.get_rect()
+		self.position = pygame.math.Vector2(position[0], position[1])
+		self.direction = direction
+		self.speed = 20
+
+	def get_position(self):
+		return self.position
+
+	def update_position(self):
+		if self.direction == 1:
+			self.position.x += self.speed
+		else:
+			self.position.x -= self.speed
+
+	def update(self, delta):
+		self.rect.center = self.position.x, self.position.y
+
+class Weapon:
+	def __init__(self, spritesheet_loader):
+		super().__init__()
+		self.spritesheet_loader = spritesheet_loader
+		self.pew_sprite_group = pygame.sprite.Group()
+		self.area = Rect(0, 0, int(SCREEN_W / 2), int(SCREEN_H / 2))
+
+		self.load_sprites()
+
+	def load_sprites(self):
+		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
+		image_at = self.spritesheet.image_at
+
+		self.pew_image = image_at(Rect((0, 0), (14, 10)), -1)
+
+	def get_spritesheet_filename(self):
+		return 'weapon-sprites.png'
+
+	def shoot(self, player):
+		pew = Pew(self.pew_image, player.get_direction(), player.rect.right, (player.rect.top + int(player.get_height() / 3)))
+		self.pew_sprite_group.add(pew)
+
+		return pew
+
+	def update(self, delta):
+		for pew in self.pew_sprite_group:
+			pew.update_position()
+			p = pew.get_position()
+			if p.x > self.area.width or p.x < 0:
+				pew.kill()
+
+		self.pew_sprite_group.update(delta)
+
 
 class Player(pygame.sprite.Sprite):
 	def __init__(self, spritesheet_loader, sounds):
@@ -436,6 +490,8 @@ class Player(pygame.sprite.Sprite):
 		self.dead = False
 		self.shooting = False
 
+		self.weapon = Weapon(self.spritesheet_loader)
+
 		self.reset_animation = False
 
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
@@ -445,6 +501,9 @@ class Player(pygame.sprite.Sprite):
 
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
+
+	def get_direction(self):
+		return self.direction
 
 	def toggle_climb_hand_side(self, index):
 		self.climb_hand_side = int(not self.climb_hand_side)
@@ -462,15 +521,31 @@ class Player(pygame.sprite.Sprite):
 				dict(duration=2, image=image_at(Rect((0, 8), (24, 24)), -1, flip=True)),
 				dict(duration=0.1, image=image_at(Rect((25, 8), (24, 24)), -1, flip=True))
 			]),
+			still_shoot_left=Animation([
+				dict(duration=0.1, image=image_at(Rect((291, 8), (32, 24)), -1))
+			]),
+			still_shoot_right=Animation([
+				dict(duration=0.1, image=image_at(Rect((291, 8), (32, 24)), -1, flip=True))
+			]),
 			walk_left=Animation([
 				dict(duration=0.05, image=image_at(Rect((80, 8), (24, 24)), -1)),
 				dict(duration=0.05, image=image_at(Rect((108, 8), (24, 24)), -1)),
 				dict(duration=0.05, image=image_at(Rect((133, 8), (24, 24)), -1))
 			]),
+			walk_left_shoot=Animation([
+				dict(duration=0.05, image=image_at(Rect((324, 8), (32, 24)), -1)),
+				dict(duration=0.05, image=image_at(Rect((357, 8), (32, 24)), -1)),
+				dict(duration=0.05, image=image_at(Rect((390, 8), (32, 24)), -1)),
+			]),
 			walk_right=Animation([
 				dict(duration=0.05, image=image_at(Rect((80, 8), (24, 24)), -1, flip=True)),
 				dict(duration=0.05, image=image_at(Rect((108, 8), (24, 24)), -1, flip=True)),
 				dict(duration=0.05, image=image_at(Rect((133, 8), (24, 24)), -1, flip=True))
+			]),
+			walk_right_shoot=Animation([
+				dict(duration=0.05, image=image_at(Rect((324, 8), (32, 24)), -1, flip=True)),
+				dict(duration=0.05, image=image_at(Rect((357, 8), (32, 24)), -1, flip=True)),
+				dict(duration=0.05, image=image_at(Rect((390, 8), (32, 24)), -1, flip=True)),
 			]),
 			climb_still_right=Animation([
 				dict(duration=0, image=image_at(Rect((224, 0), (16, 32)), -1)),
@@ -488,8 +563,14 @@ class Player(pygame.sprite.Sprite):
 			jump_left=Animation([
 				dict(duration=0, image=image_at(Rect((194, 0), (26, 30)), -1))
 			]),
+			jump_left_shoot=Animation([
+				dict(duration=0, image=image_at(Rect((423, 0), (32, 32)), -1))
+			]),
 			jump_right=Animation([
 				dict(duration=0, image=image_at(Rect((194, 0), (26, 30)), -1, flip=True))
+			]),
+			jump_right_shoot=Animation([
+				dict(duration=0, image=image_at(Rect((423, 0), (32, 32)), -1, flip=True))
 			]),
 			teleport=Animation([
 				dict(duration=0, image=image_at(Rect((670, 0), (8, 32)), -1))
@@ -497,12 +578,6 @@ class Player(pygame.sprite.Sprite):
 			teleport_arrive=Animation([
 				dict(duration=0.1, image=image_at(Rect((680, 0), (24, 32)), -1)),
 				dict(duration=0.1, image=image_at(Rect((705, 0), (24, 32)), -1))
-			]),
-			still_shoot_left=Animation([
-				dict(duration=0, image=image_at(Rect((291, 8), (32, 24)), -1))
-			]),
-			still_shoot_right=Animation([
-				dict(duration=0, image=image_at(Rect((291, 8), (32, 24)), -1, flip=True))
 			])
 		)
 
@@ -684,6 +759,8 @@ class Player(pygame.sprite.Sprite):
 		self.sounds.play_sound('buster')
 		self.reset_animation = True
 
+		return self.weapon.shoot(self)
+
 	def die(self):
 		self.dead = True
 
@@ -721,9 +798,15 @@ class Player(pygame.sprite.Sprite):
 			v = self.velocity
 
 			if v.y != 0:
-				animation = self.animations['jump_right'] if self.direction == 1 else self.animations['jump_left']
+				if self.shooting:
+					animation = self.animations['jump_right_shoot'] if self.direction == 1 else self.animations['jump_left_shoot']
+				else:
+					animation = self.animations['jump_right'] if self.direction == 1 else self.animations['jump_left']
 			elif v.x != 0:
-				animation = self.animations['walk_right'] if self.direction == 1 else self.animations['walk_left']
+				if self.shooting:
+					animation = self.animations['walk_right_shoot'] if self.direction == 1 else self.animations['walk_left_shoot']
+				else:
+					animation = self.animations['walk_right'] if self.direction == 1 else self.animations['walk_left']
 			else:
 				if self.shooting:
 					animation = self.animations['still_shoot_right'] if self.direction == 1 else self.animations['still_shoot_left']
@@ -741,6 +824,8 @@ class Player(pygame.sprite.Sprite):
 			self.rect.width = self.image.get_rect().width
 			self.rect.center = prev_center
 			self.current_time = 0
+
+		self.weapon.update(delta)
 
 		a = self.area
 		mw, mh = self.map_size
@@ -763,7 +848,7 @@ class Game:
 		self.spritesheet_loader = SpriteSheetLoader(self.loader)
 		self.mode = MODE_MENU
 		self.clock = pygame.time.Clock()
-		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
+		self.area = Rect(0, 0, int(SCREEN_W / 2), int(SCREEN_H / 2))
 		self.sprites = pygame.sprite.Group()
 
 	def init_screen(self):
@@ -1059,7 +1144,8 @@ class Game:
 			elif event.key == pygame.K_f:
 				if event.type == pygame.KEYDOWN:
 					debug('Pew')
-					player.shoot()
+					pew = player.shoot()
+					self.sprites.add(pew)
 				elif event.type == pygame.KEYUP:
 					player.stop_shooting()
 			elif event.key == pygame.K_ESCAPE:
