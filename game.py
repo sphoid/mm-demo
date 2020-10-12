@@ -305,17 +305,153 @@ class GameObject:
 	def collides_with(self, rect):
 		return self.rect.colliderect(rect)
 
+class Enemy(pygame.sprite.Sprite):
+	def __init__(self, spritesheet_loader, stage, *position):
+		super().__init__()
+		self.spritesheet_loader = spritesheet_loader
+
+		self.direction = 0
+		self.move_speed = 5
+		self.velocity = pygame.math.Vector2(0, 0)
+		self.position = pygame.math.Vector2(position[0], position[1])
+		self.stage = stage
+
+		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
+
+		self.reset_animation = False
+		self.current_time = 0
+
+		self.load_sprites()
+
+	def load_sprites(self):
+		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			move_left=Animation([
+				dict(duration=0.05, image=image_at(Rect((292, 326), (24, 26)), -1)),
+				dict(duration=0.05, image=image_at(Rect((332, 326), (24, 26)), -1)),
+			]),
+			move_right=Animation([
+				dict(duration=0.05, image=image_at(Rect((292, 326), (24, 26)), -1, flip=True)),
+				dict(duration=0.05, image=image_at(Rect((332, 326), (24, 26)), -1, flip=True)),
+			])
+		)
+
+		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+	def get_spritesheet_filename(self):
+		return 'enemies.png'
+
+	def get_position(self):
+		return self.position
+
+	def set_position(self, *position):
+		self.position.x = int(position[0])
+		self.position.y = int(position[1])
+
+	def get_bottom(self):
+		return int(self.position.y + int(self.rect.height / 2))
+
+	def get_top(self):
+		return int(self.position.y - int(self.rect.height / 2))
+
+	def get_left(self):
+		return int(self.position.x - int(self.rect.width / 2))
+
+	def get_right(self):
+		return int(self.position.x + int(self.rect.width / 2))
+
+	def accelerate(self, *v):
+		self.velocity.x += v[0]
+		self.velocity.y += v[1]
+
+	def deccelerate(self, *v):
+		self.velocity.x -= v[0]
+		self.velocity.y -= v[1]
+
+	def get_velocity(self):
+		return self.velocity
+
+	def set_velocity(self, *v):
+		self.velocity.x = v[0]
+		self.velocity.y = v[1]
+
+	def set_velocity_x(self, v):
+		self.velocity.x = v
+
+	def set_velocity_y(self, v):
+		self.velocity.y = v
+
+	def move_right(self):
+		self.direction = 1
+		self.accelerate(self.move_speed, 0)
+
+	def move_left(self):
+		self.direction = 0
+		self.accelerate(-self.move_speed, 0)
+
+	def stop_x(self):
+		self.set_velocity_x(0)
+
+	def move_down(self):
+		self.accelerate(0, self.move_speed)
+
+	def move_up(self):
+		self.accelerate(0, -self.move_speed)
+
+	def collides_with(self, rect):
+		return self.rect.colliderect(rect)
+
+	def react(self, player):
+		v = self.get_velocity()
+		if player.get_right() > self.get_left() - 200 and v.x == 0 and v.y == 0:
+			self.move_left()
+		elif player.get_right() > self.get_left() - 50 and v.y == 0:
+			self.stop_x()
+			self.move_down()
+
+	def update_position(self):
+		v = self.get_velocity()
+		self.position.x += v.x
+		self.position.y += v.y
+
+	def update(self, delta):
+		animation = self.animations['move_right'] if self.direction == 1 else self.animations['move_left']
+
+		if self.reset_animation:
+			animation.reset()
+			self.reset_animation = False
+
+		self.current_time += delta
+		if self.current_time >= animation.next_time:
+			prev_center = self.rect.center
+			self.image = animation.next(0)['image']
+			self.rect.width = self.image.get_rect().width
+			self.rect.center = prev_center
+			self.current_time = 0
+
+		p = self.position
+		self.rect.center = int(p.x + self.stage.get_scroll_offset()), int(p.y)
+
+		if self.rect.top > self.area.height:
+			self.kill()
+
 class Stage:
-	def __init__(self, loader):
+	def __init__(self, loader, spritesheet_loader):
 		self.tile_height = 32
 		self.tile_width = 32
 		self.loader = loader
+		self.spritesheet_loader = spritesheet_loader
 		self.player = None
 		self.map = None
 		self.tiles = {}
 		self.ladders = {}
 		self.platforms = {}
 		self.tile_sprite_group = pygame.sprite.Group()
+		self.enemy_sprite_group = pygame.sprite.Group()
 		self.scroll_offset = 0
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 		self.center = self.area.width / 2
@@ -341,6 +477,13 @@ class Stage:
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.ladders[x, y] = GameObject(Rect((x, y), (width, height)))
 			print('LOAD: Ladder %d,%d %dx%d'%(x, y, width, height))
+
+		for obj in self.map.get_layer_by_name('enemies'):
+			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
+			enemy = Enemy(self.spritesheet_loader, self, x, y)
+			self.enemy_sprite_group.add(enemy)
+			# self.enemies.append(enemy)
+			print('LOAD: Enemy %d,%d %dx%d'%(x, y, width, height))
 
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
@@ -396,11 +539,20 @@ class Stage:
 
 		# print('area_width=%d map_width=%d scroll_offset=%d'%(a.width, w, self.scroll_offset))
 
+	def update_enemies(self, player):
+		for enemy in self.enemy_sprite_group:
+			enemy.react(player)
+
 	def update(self, delta):
+		for enemy in self.enemy_sprite_group:
+			enemy.update_position()
+
 		self.tile_sprite_group.update(delta)
+		self.enemy_sprite_group.update(delta)
 
 	def draw(self, surface):
 		self.tile_sprite_group.draw(surface)
+		self.enemy_sprite_group.draw(surface)
 
 		if MAP_DEBUG:
 			for platform in self.platforms.values():
@@ -473,6 +625,8 @@ class Player(pygame.sprite.Sprite):
 		self.climb_speed = 3
 		self.jump_speed = 10
 
+		self.damage_time = 0
+
 		self.max_height = 48
 		self.max_width = 48
 
@@ -489,6 +643,7 @@ class Player(pygame.sprite.Sprite):
 		self.climb_hand_side = 1
 		self.dead = False
 		self.shooting = False
+		self.damaged = False
 
 		self.weapon = Weapon(self.spritesheet_loader)
 
@@ -578,6 +733,12 @@ class Player(pygame.sprite.Sprite):
 			teleport_arrive=Animation([
 				dict(duration=0.1, image=image_at(Rect((680, 0), (24, 32)), -1)),
 				dict(duration=0.1, image=image_at(Rect((705, 0), (24, 32)), -1))
+			]),
+			damaged_left=Animation([
+				dict(duration=1, image=image_at(Rect((258, 0), (32, 32)), -1))
+			]),
+			damaged_right=Animation([
+				dict(duration=1, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True))
 			])
 		)
 
@@ -664,7 +825,6 @@ class Player(pygame.sprite.Sprite):
 	def collide_left(self, x):
 		self.velocity.x = 0
 		self.position.x = int(x + int(self.rect.width / 2))
-		# self.stopping = True
 		self.reset_animation = True
 
 		print('collide_left new pos=%d,%d'%(self.position.x, self.position.y))
@@ -761,6 +921,16 @@ class Player(pygame.sprite.Sprite):
 
 		return self.weapon.shoot(self)
 
+	def damage(self, direction, force=1):
+		print('Taking damage')
+		if direction:
+			self.accelerate(-force, 0)
+		else:
+			self.accelerate(force, 0)
+		self.direction = direction
+		self.damaged = True
+		self.reset_animation = True
+
 	def die(self):
 		self.dead = True
 
@@ -784,6 +954,9 @@ class Player(pygame.sprite.Sprite):
 			animation = self.animations['teleport']
 		elif self.arriving:
 			animation = self.animations['teleport_arrive']
+		elif self.damaged:
+			animation = self.animations['damaged_right'] if self.direction == 1 else self.animations['damaged_left']
+			self.damage_time += delta
 		elif self.climbing:
 			if self.climbing_over:
 				animation = self.animations['climb_over']
@@ -812,6 +985,10 @@ class Player(pygame.sprite.Sprite):
 					animation = self.animations['still_shoot_right'] if self.direction == 1 else self.animations['still_shoot_left']
 				else:
 					animation = self.animations['still_right'] if self.direction == 1 else self.animations['still_left']
+
+		if self.damaged and self.damage_time >= 2:
+			self.damaged = False
+			self.stop_x()
 
 		if self.reset_animation:
 			animation.reset()
@@ -879,7 +1056,7 @@ class Game:
 		self.sprites.add(self.player)
 
 	def init_stage(self):
-		self.stage = Stage(self.loader)
+		self.stage = Stage(self.loader, self.spritesheet_loader)
 		self.stage.load()
 
 		self.player.set_map_size(self.stage.get_map_size())
@@ -1021,6 +1198,11 @@ class Game:
 			elif player.get_right() > mw:
 				player.collide_right(mw)
 
+		# colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.enemy_sprite_group))
+		# if len(colliding_enemies) > 0:
+		# 	player.damage(1)
+
+
 	def grab_ladder_behind(self, player):
 		stage = self.stage
 		prect = player.get_rect()
@@ -1060,6 +1242,7 @@ class Game:
 		player.update_position()
 		stage.update_scroll_offset(player.get_position())
 		self.check_collision(player)
+		stage.update_enemies(player)
 
 		player.update_status()
 
@@ -1075,7 +1258,6 @@ class Game:
 
 		if PLAYER_DEBUG:
 			pygame.draw.rect(buffer, (0, 255, 0), player.rect)
-
 
 		screen.blit(pygame.transform.scale2x(buffer), (0, 0))
 
