@@ -421,7 +421,7 @@ class Enemy(pygame.sprite.Sprite):
 	def move_up(self):
 		self.accelerate(0, -self.move_speed)
 
-	def damage(self, pew):
+	def hit(self, pew):
 		damage = pew.get_damage()
 		self.hit_points -= damage
 
@@ -478,7 +478,7 @@ class Enemy(pygame.sprite.Sprite):
 				self.kill()
 
 class Stage:
-	def __init__(self, loader, spritesheet_loader):
+	def __init__(self, loader, spritesheet_loader, sounds):
 		self.tile_height = 32
 		self.tile_width = 32
 		self.loader = loader
@@ -494,7 +494,7 @@ class Stage:
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 		self.center = self.area.width / 2
 		self.map_size = None
-		self.sounds = {}
+		self.sounds = sounds
 
 	def load_map(self):
 		self.map = self.loader.load_map('level-1.tmx')
@@ -601,7 +601,7 @@ class Stage:
 				pygame.draw.rect(surface, (255,0,0), ladder.rect)
 
 class BusterPellet(pygame.sprite.Sprite):
-	def __init__(self, image, direction, *position):
+	def __init__(self, image, stage, direction, *position):
 		super().__init__()
 		self.image = image
 		self.rect = image.get_rect()
@@ -609,6 +609,7 @@ class BusterPellet(pygame.sprite.Sprite):
 		self.direction = direction
 		self.speed = 20
 		self.damage = 1
+		self.stage = stage
 
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
@@ -644,15 +645,16 @@ class BusterPellet(pygame.sprite.Sprite):
 			self.position.x -= self.speed
 
 	def update(self, delta):
-		self.rect.center = int(self.position.x), int(self.position.y)
+		self.rect.center = int(self.position.x + self.stage.get_scroll_offset()), int(self.position.y)
 
 class Weapon:
-	def __init__(self, spritesheet_loader, sounds):
+	def __init__(self, spritesheet_loader, sounds, player):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 		self.pew_sprite_group = pygame.sprite.Group()
 		self.area = Rect(0, 0, int(SCREEN_W / 2), int(SCREEN_H / 2))
 		self.sounds = sounds
+		self.player = player
 
 		self.load_sprites()
 
@@ -665,8 +667,9 @@ class Weapon:
 	def get_spritesheet_filename(self):
 		return 'weapon-sprites.png'
 
-	def shoot(self, player):
-		pellet = BusterPellet(self.pellet_image, player.get_direction(), player.rect.right, (player.rect.top + int(player.get_height() / 3)))
+	def shoot(self):
+		player = self.player
+		pellet = BusterPellet(self.pellet_image, player.get_stage(), player.get_direction(), player.get_right(), (player.get_top() + int(player.get_height() / 3)))
 		self.pew_sprite_group.add(pellet)
 
 		self.sounds.play_sound('buster')
@@ -675,19 +678,19 @@ class Weapon:
 
 	def check_hits(self, enemy_sprite_group):
 		if len(self.pew_sprite_group) > 0:
-			print('checking enemy hits')
 			for pew in self.pew_sprite_group:
 				for enemy in enemy_sprite_group:
 					hit = enemy.collides_with(pew.get_rect())
 					if hit:
-						print('hit enemy')
-						enemy.damage(pew)
+						enemy.hit(pew)
 
 	def update(self, delta):
+		stage = self.player.get_stage()
 		for pew in self.pew_sprite_group:
 			pew.update_position()
 			p = pew.get_position()
-			if p.x > self.area.width or p.x < 0:
+
+			if p.x + stage.get_scroll_offset() > self.area.width or p.x < 0:
 				pew.kill()
 
 		self.pew_sprite_group.update(delta)
@@ -740,6 +743,7 @@ class Player(pygame.sprite.Sprite):
 		self.jump_speed = 10
 		self.max_hit_points = 28
 		self.hit_points = self.max_hit_points
+		self.stage = None
 
 		self.damage_time = 0
 
@@ -761,7 +765,7 @@ class Player(pygame.sprite.Sprite):
 		self.shooting = False
 		self.damaged = False
 
-		self.weapon = Weapon(self.spritesheet_loader, self.sounds)
+		self.weapon = Weapon(self.spritesheet_loader, self.sounds, self)
 
 		self.reset_animation = False
 
@@ -865,8 +869,15 @@ class Player(pygame.sprite.Sprite):
 	def toggle_climb_hand_side(self, index):
 		self.climb_hand_side = int(not self.climb_hand_side)
 
-	def set_map_size(self, map_size):
-		self.map_size = map_size
+	def set_stage(self, stage):
+		self.stage = stage
+		self.map_size = stage.get_map_size()
+
+	def get_stage(self):
+		return self.stage
+
+	# def set_map_size(self, map_size):
+	# 	self.map_size = map_size
 
 	def is_dead(self):
 		return self.dead
@@ -1061,7 +1072,7 @@ class Player(pygame.sprite.Sprite):
 		self.shooting = True
 		self.reset_animation = True
 
-		return self.weapon.shoot(self)
+		return self.weapon.shoot()
 
 	def damage(self, damage, force=2):
 		self.hit_points -= damage
@@ -1086,6 +1097,9 @@ class Player(pygame.sprite.Sprite):
 	def stop_shooting(self):
 		self.shooting = False
 		self.reset_animation = True
+
+	def get_map_offset(self):
+		return self.stage.get_scroll_offset()
 
 	def update_position(self):
 		v = self.get_velocity()
@@ -1220,10 +1234,10 @@ class Game:
 		self.hud.add(self.life_meter)
 
 	def init_stage(self):
-		self.stage = Stage(self.loader, self.spritesheet_loader)
+		self.stage = Stage(self.loader, self.spritesheet_loader, self.sounds)
 		self.stage.load()
 
-		self.player.set_map_size(self.stage.get_map_size())
+		self.player.set_stage(self.stage)
 
 		self.music_player.play('bombman-stage')
 
