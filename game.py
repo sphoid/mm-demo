@@ -328,7 +328,7 @@ class Enemy(pygame.sprite.Sprite):
 		self.current_time = 0
 
 		self.hit_points = 1
-		self.damage = 4
+		self.damage = 28
 		self.dead = False
 
 		self.load_sprites()
@@ -818,6 +818,12 @@ class Player(pygame.sprite.Sprite):
 			climb_still_left=Animation([
 				dict(duration=0, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True)),
 			]),
+			climb_shoot_left=Animation([
+				dict(duration=0, image=image_at(Rect((456, 0), (24, 32)), -1)),
+			]),
+			climb_shoot_right=Animation([
+				dict(duration=0, image=image_at(Rect((456, 0), (24, 32)), -1, flip=True)),
+			]),
 			climb=Animation([
 				dict(duration=0.05, image=image_at(Rect((224, 0), (16, 32)), -1)),
 				dict(duration=0.05, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True)),
@@ -907,6 +913,9 @@ class Player(pygame.sprite.Sprite):
 
 	def get_direction(self):
 		return self.direction
+
+	def set_direction(self, direction):
+		self.direction = direction
 
 	def collide_bottom(self, y):
 		print('Resetting player_y=%d'%y)
@@ -1001,6 +1010,11 @@ class Player(pygame.sprite.Sprite):
 		self.climbing = True
 		self.reset_animation = True
 
+	def release_ladder(self):
+		self.climbing = False
+		self.falling = True
+		self.reset_animation = True
+
 	def climb_over(self):
 		self.climbing_over = True
 		self.reset_animation = True
@@ -1016,7 +1030,6 @@ class Player(pygame.sprite.Sprite):
 		self.climbing = False
 		self.climbing_over = False
 		self.reset_animation = True
-
 
 	def climb_up(self):
 		self.accelerate(0, -self.climb_speed)
@@ -1038,7 +1051,9 @@ class Player(pygame.sprite.Sprite):
 		return self.warping
 
 	def jump(self):
-		if not self.falling and not self.climbing:
+		if self.climbing:
+			self.release_ladder()
+		elif not self.falling:
 			self.accelerate(0, -self.jump_speed)
 			self.falling = True
 
@@ -1094,6 +1109,9 @@ class Player(pygame.sprite.Sprite):
 			self.die()
 
 	def update(self, delta):
+		if self.dead:
+			self.kill()
+
 		if self.warping:
 			animation = self.animations['warp']
 		elif self.arriving:
@@ -1103,6 +1121,8 @@ class Player(pygame.sprite.Sprite):
 		elif self.climbing:
 			if self.climbing_over:
 				animation = self.animations['climb_over']
+			elif self.shooting:
+				animation = self.animations['climb_shoot_right'] if self.direction == 1 else self.animations['climb_shoot_left']
 			else:
 				v = self.velocity
 
@@ -1434,6 +1454,8 @@ class Game:
 					debug('R Down')
 					if not player.is_climbing() and not player.is_warping():
 						player.move_right()
+					elif player.is_climbing():
+						player.set_direction(1)
 				elif event.type == pygame.KEYUP:
 					debug('R Up')
 					player.stop_x()
@@ -1442,6 +1464,8 @@ class Game:
 					debug('L Down')
 					if not player.is_climbing() and not player.is_warping():
 						player.move_left()
+					elif player.is_climbing():
+						player.set_direction(0)
 				elif event.type == pygame.KEYUP:
 					debug('L Up')
 					player.stop_x()
@@ -1473,7 +1497,7 @@ class Game:
 						player.stop_climbing()
 			elif event.key == pygame.K_SPACE and event.type == pygame.KEYDOWN:
 				debug('Space')
-				if not player.is_climbing() and not player.is_falling():
+				if not player.is_falling():
 					player.jump()
 			elif event.key == pygame.K_f:
 				if event.type == pygame.KEYDOWN:
