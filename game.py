@@ -219,7 +219,9 @@ class SoundLibrary:
 			land=load_sound('land.wav', self.mixer),
 			pause=load_sound('pause.wav', self.mixer),
 			warp=load_sound('warp.wav', self.mixer),
-			buster=load_sound('buster.wav', self.mixer)
+			buster=load_sound('buster.wav', self.mixer),
+			damage=load_sound('damage.wav', self.mixer),
+			edamage=load_sound('edamage.wav', self.mixer),
 		)
 
 	def play_sound(self, sound, blocking=False):
@@ -284,6 +286,9 @@ class GameObject:
 	def __init__(self, rect):
 		self.rect = rect
 
+	def get_rect(self):
+		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
+
 	def get_bottom(self):
 		return self.rect.bottom
 
@@ -303,10 +308,10 @@ class GameObject:
 		return self.rect.height
 
 	def collides_with(self, rect):
-		return self.rect.colliderect(rect)
+		return self.get_rect().colliderect(rect)
 
 class Enemy(pygame.sprite.Sprite):
-	def __init__(self, spritesheet_loader, stage, *position):
+	def __init__(self, spritesheet_loader, stage, sounds, *position):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 
@@ -315,11 +320,16 @@ class Enemy(pygame.sprite.Sprite):
 		self.velocity = pygame.math.Vector2(0, 0)
 		self.position = pygame.math.Vector2(position[0], position[1])
 		self.stage = stage
+		self.sounds = sounds
 
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 
 		self.reset_animation = False
 		self.current_time = 0
+
+		self.hit_points = 1
+		self.damage = 4
+		self.dead = False
 
 		self.load_sprites()
 
@@ -344,6 +354,15 @@ class Enemy(pygame.sprite.Sprite):
 
 	def get_spritesheet_filename(self):
 		return 'enemies.png'
+
+	def get_rect(self):
+		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
+
+	def get_width(self):
+		return self.rect.width
+
+	def get_height(self):
+		return self.rect.height
 
 	def get_position(self):
 		return self.position
@@ -402,8 +421,20 @@ class Enemy(pygame.sprite.Sprite):
 	def move_up(self):
 		self.accelerate(0, -self.move_speed)
 
+	def damage(self, pew):
+		damage = pew.get_damage()
+		self.hit_points -= damage
+
+		self.sounds.play_sound('edamage')
+
+	def get_damage(self):
+		return self.damage
+
+	def die(self):
+		self.dead = True
+
 	def collides_with(self, rect):
-		return self.rect.colliderect(rect)
+		return self.get_rect().colliderect(rect)
 
 	def react(self, player):
 		v = self.get_velocity()
@@ -418,26 +449,33 @@ class Enemy(pygame.sprite.Sprite):
 		self.position.x += v.x
 		self.position.y += v.y
 
+	def update_status(self):
+		if self.hit_points <= 0:
+			self.die()
+
 	def update(self, delta):
-		animation = self.animations['move_right'] if self.direction == 1 else self.animations['move_left']
-
-		if self.reset_animation:
-			animation.reset()
-			self.reset_animation = False
-
-		self.current_time += delta
-		if self.current_time >= animation.next_time:
-			prev_center = self.rect.center
-			self.image = animation.next(0)['image']
-			self.rect.width = self.image.get_rect().width
-			self.rect.center = prev_center
-			self.current_time = 0
-
-		p = self.position
-		self.rect.center = int(p.x + self.stage.get_scroll_offset()), int(p.y)
-
-		if self.rect.top > self.area.height:
+		if self.dead:
 			self.kill()
+		else:
+			animation = self.animations['move_right'] if self.direction == 1 else self.animations['move_left']
+
+			if self.reset_animation:
+				animation.reset()
+				self.reset_animation = False
+
+			self.current_time += delta
+			if self.current_time >= animation.next_time:
+				prev_center = self.rect.center
+				self.image = animation.next(0)['image']
+				self.rect.width = self.image.get_rect().width
+				self.rect.center = prev_center
+				self.current_time = 0
+
+			p = self.position
+			self.rect.center = int(p.x + self.stage.get_scroll_offset()), int(p.y)
+
+			if self.rect.top > self.area.height:
+				self.kill()
 
 class Stage:
 	def __init__(self, loader, spritesheet_loader):
@@ -480,7 +518,7 @@ class Stage:
 
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
-			enemy = Enemy(self.spritesheet_loader, self, x, y)
+			enemy = Enemy(self.spritesheet_loader, self, self.sounds, x, y)
 			self.enemy_sprite_group.add(enemy)
 			# self.enemies.append(enemy)
 			print('LOAD: Enemy %d,%d %dx%d'%(x, y, width, height))
@@ -546,6 +584,7 @@ class Stage:
 	def update(self, delta):
 		for enemy in self.enemy_sprite_group:
 			enemy.update_position()
+			enemy.update_status()
 
 		self.tile_sprite_group.update(delta)
 		self.enemy_sprite_group.update(delta)
@@ -561,7 +600,7 @@ class Stage:
 			for ladder in self.ladders.values():
 				pygame.draw.rect(surface, (255,0,0), ladder.rect)
 
-class Pew(pygame.sprite.Sprite):
+class BusterPellet(pygame.sprite.Sprite):
 	def __init__(self, image, direction, *position):
 		super().__init__()
 		self.image = image
@@ -569,9 +608,34 @@ class Pew(pygame.sprite.Sprite):
 		self.position = pygame.math.Vector2(position[0], position[1])
 		self.direction = direction
 		self.speed = 20
+		self.damage = 1
+
+	def get_rect(self):
+		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
+
+	def get_width(self):
+		return self.rect.width
+
+	def get_height(self):
+		return self.rect.height
 
 	def get_position(self):
 		return self.position
+
+	def get_bottom(self):
+		return int(self.position.y + int(self.rect.height / 2))
+
+	def get_top(self):
+		return int(self.position.y - int(self.rect.height / 2))
+
+	def get_left(self):
+		return int(self.position.x - int(self.rect.width / 2))
+
+	def get_right(self):
+		return int(self.position.x + int(self.rect.width / 2))
+
+	def get_damage(self):
+		return self.damage
 
 	def update_position(self):
 		if self.direction == 1:
@@ -580,14 +644,15 @@ class Pew(pygame.sprite.Sprite):
 			self.position.x -= self.speed
 
 	def update(self, delta):
-		self.rect.center = self.position.x, self.position.y
+		self.rect.center = int(self.position.x), int(self.position.y)
 
 class Weapon:
-	def __init__(self, spritesheet_loader):
+	def __init__(self, spritesheet_loader, sounds):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 		self.pew_sprite_group = pygame.sprite.Group()
 		self.area = Rect(0, 0, int(SCREEN_W / 2), int(SCREEN_H / 2))
+		self.sounds = sounds
 
 		self.load_sprites()
 
@@ -595,16 +660,28 @@ class Weapon:
 		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
 		image_at = self.spritesheet.image_at
 
-		self.pew_image = image_at(Rect((0, 0), (14, 10)), -1)
+		self.pellet_image = image_at(Rect((0, 0), (14, 10)), -1)
 
 	def get_spritesheet_filename(self):
 		return 'weapon-sprites.png'
 
 	def shoot(self, player):
-		pew = Pew(self.pew_image, player.get_direction(), player.rect.right, (player.rect.top + int(player.get_height() / 3)))
-		self.pew_sprite_group.add(pew)
+		pellet = BusterPellet(self.pellet_image, player.get_direction(), player.rect.right, (player.rect.top + int(player.get_height() / 3)))
+		self.pew_sprite_group.add(pellet)
 
-		return pew
+		self.sounds.play_sound('buster')
+
+		return pellet
+
+	def check_hits(self, enemy_sprite_group):
+		if len(self.pew_sprite_group) > 0:
+			print('checking enemy hits')
+			for pew in self.pew_sprite_group:
+				for enemy in enemy_sprite_group:
+					hit = enemy.collides_with(pew.get_rect())
+					if hit:
+						print('hit enemy')
+						enemy.damage(pew)
 
 	def update(self, delta):
 		for pew in self.pew_sprite_group:
@@ -615,6 +692,43 @@ class Weapon:
 
 		self.pew_sprite_group.update(delta)
 
+class HudGroup(pygame.sprite.Group):
+	def add(self, *sprites):
+		for sprite in sprites:
+			if sprite.__class__.__name__ == 'LifeMeter':
+				self.life_meter = sprite
+			super().add(sprite)
+
+	def draw(self, surface):
+		super().draw(surface)
+		if hasattr(self, 'life_meter'):
+			self.life_meter.draw_damage_mask(surface)
+
+class LifeMeter(pygame.sprite.Sprite):
+	def __init__(self, spritesheet_loader, sounds, player):
+		super().__init__()
+		self.spritesheet_loader = spritesheet_loader
+		self.player = player
+		self.sounds = sounds
+
+		self.load_sprites()
+
+	def get_spritesheet_filename(self):
+		return 'energy-sprites.png'
+
+	def load_sprites(self):
+		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
+		image_at = self.spritesheet.image_at
+
+		self.image = image_at(Rect((0, 8), (8, 56)), None, True)
+		self.rect = self.image.get_rect(left=10, top=10)
+		self.damage_mask_rect = Rect((self.rect.left + 1, self.rect.top), (self.rect.width - 2, 0))
+
+	def draw_damage_mask(self, surface):
+		diff = self.player.get_max_hit_points() - self.player.get_hit_points()
+		damage_mask_rect = Rect((self.rect.left + 1, self.rect.top), (self.rect.width - 2, diff * 4))
+
+		pygame.draw.rect(surface, (0, 0, 0), damage_mask_rect)
 
 class Player(pygame.sprite.Sprite):
 	def __init__(self, spritesheet_loader, sounds):
@@ -624,6 +738,8 @@ class Player(pygame.sprite.Sprite):
 		self.move_speed = 5
 		self.climb_speed = 3
 		self.jump_speed = 10
+		self.max_hit_points = 28
+		self.hit_points = self.max_hit_points
 
 		self.damage_time = 0
 
@@ -636,7 +752,7 @@ class Player(pygame.sprite.Sprite):
 		self.current_time = 0
 		self.direction = 1
 		self.falling = True
-		self.teleporting = True
+		self.warping = True
 		self.arriving = False
 		self.climbing = False
 		self.climbing_over = False
@@ -645,7 +761,7 @@ class Player(pygame.sprite.Sprite):
 		self.shooting = False
 		self.damaged = False
 
-		self.weapon = Weapon(self.spritesheet_loader)
+		self.weapon = Weapon(self.spritesheet_loader, self.sounds)
 
 		self.reset_animation = False
 
@@ -654,14 +770,8 @@ class Player(pygame.sprite.Sprite):
 
 		self.load_sprites()
 
-	def get_rect(self):
-		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
-
-	def get_direction(self):
-		return self.direction
-
-	def toggle_climb_hand_side(self, index):
-		self.climb_hand_side = int(not self.climb_hand_side)
+	def get_spritesheet_filename(self):
+		return 'megaman-sprites.png'
 
 	def load_sprites(self):
 		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
@@ -727,10 +837,10 @@ class Player(pygame.sprite.Sprite):
 			jump_right_shoot=Animation([
 				dict(duration=0, image=image_at(Rect((423, 0), (32, 32)), -1, flip=True))
 			]),
-			teleport=Animation([
+			warp=Animation([
 				dict(duration=0, image=image_at(Rect((670, 0), (8, 32)), -1))
 			]),
-			teleport_arrive=Animation([
+			warp_arrive=Animation([
 				dict(duration=0.1, image=image_at(Rect((680, 0), (24, 32)), -1)),
 				dict(duration=0.1, image=image_at(Rect((705, 0), (24, 32)), -1))
 			]),
@@ -746,14 +856,26 @@ class Player(pygame.sprite.Sprite):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
+	def toggle_climb_hand_side(self, index):
+		self.climb_hand_side = int(not self.climb_hand_side)
+
 	def set_map_size(self, map_size):
 		self.map_size = map_size
 
-	def get_spritesheet_filename(self):
-		return 'megaman-sprites.png'
-
 	def is_dead(self):
 		return self.dead
+
+	def get_weapon(self):
+		return self.weapon
+
+	def get_max_hit_points(self):
+		return self.max_hit_points
+
+	def get_hit_points(self):
+		return self.hit_points
+
+	def get_rect(self):
+		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
 
 	def get_width(self):
 		if self.climbing:
@@ -783,13 +905,16 @@ class Player(pygame.sprite.Sprite):
 	def get_right(self):
 		return int(self.position.x + int(self.rect.width / 2))
 
+	def get_direction(self):
+		return self.direction
+
 	def collide_bottom(self, y):
 		print('Resetting player_y=%d'%y)
 		self.velocity.y = 0
 		self.position.y = int(y - int(self.rect.height / 2))
 
-		if self.teleporting:
-			self.teleporting = False
+		if self.warping:
+			self.warping = False
 			self.arriving = True
 			self.reset_animation = True
 		elif self.arriving:
@@ -909,6 +1034,9 @@ class Player(pygame.sprite.Sprite):
 	def is_falling(self):
 		return self.falling
 
+	def is_warping(self):
+		return self.warping
+
 	def jump(self):
 		if not self.falling and not self.climbing:
 			self.accelerate(0, -self.jump_speed)
@@ -916,20 +1044,26 @@ class Player(pygame.sprite.Sprite):
 
 	def shoot(self):
 		self.shooting = True
-		self.sounds.play_sound('buster')
 		self.reset_animation = True
 
 		return self.weapon.shoot(self)
 
-	def damage(self, direction, force=1):
-		print('Taking damage')
-		if direction:
+	def damage(self, damage, force=2):
+		self.hit_points -= damage
+
+		if self.direction:
 			self.accelerate(-force, 0)
 		else:
 			self.accelerate(force, 0)
-		self.direction = direction
+
+		self.damage_time = 0
 		self.damaged = True
 		self.reset_animation = True
+
+		self.sounds.play_sound('damage')
+
+	def is_damaged(self):
+		return self.damaged
 
 	def die(self):
 		self.dead = True
@@ -943,20 +1077,29 @@ class Player(pygame.sprite.Sprite):
 		self.position.x += v.x
 		self.position.y += v.y
 
-	def update_status(self):
+	def update_status(self, delta):
 		p = self.get_position()
 		a = self.area
 		if p.y > a.height:
 			self.die()
 
+		if self.damaged:
+			self.damage_time += delta
+			if self.damage_time >= 0.2:
+				self.damaged = False
+				self.stop_x()
+				self.animation_reset = True
+
+		if self.hit_points <= 0:
+			self.die()
+
 	def update(self, delta):
-		if self.teleporting:
-			animation = self.animations['teleport']
+		if self.warping:
+			animation = self.animations['warp']
 		elif self.arriving:
-			animation = self.animations['teleport_arrive']
+			animation = self.animations['warp_arrive']
 		elif self.damaged:
 			animation = self.animations['damaged_right'] if self.direction == 1 else self.animations['damaged_left']
-			self.damage_time += delta
 		elif self.climbing:
 			if self.climbing_over:
 				animation = self.animations['climb_over']
@@ -985,10 +1128,6 @@ class Player(pygame.sprite.Sprite):
 					animation = self.animations['still_shoot_right'] if self.direction == 1 else self.animations['still_shoot_left']
 				else:
 					animation = self.animations['still_right'] if self.direction == 1 else self.animations['still_left']
-
-		if self.damaged and self.damage_time >= 2:
-			self.damaged = False
-			self.stop_x()
 
 		if self.reset_animation:
 			animation.reset()
@@ -1027,6 +1166,7 @@ class Game:
 		self.clock = pygame.time.Clock()
 		self.area = Rect(0, 0, int(SCREEN_W / 2), int(SCREEN_H / 2))
 		self.sprites = pygame.sprite.Group()
+		self.hud = HudGroup()
 
 	def init_screen(self):
 		self.resolution = width, height = self.config.get_screen_resolution()
@@ -1055,6 +1195,10 @@ class Game:
 		self.player = Player(self.spritesheet_loader, self.sounds)
 		self.sprites.add(self.player)
 
+	def init_hud(self):
+		self.life_meter = LifeMeter(self.spritesheet_loader, self.sounds, self.player)
+		self.hud.add(self.life_meter)
+
 	def init_stage(self):
 		self.stage = Stage(self.loader, self.spritesheet_loader)
 		self.stage.load()
@@ -1062,50 +1206,6 @@ class Game:
 		self.player.set_map_size(self.stage.get_map_size())
 
 		self.music_player.play('bombman-stage')
-
-	def check_climb(self):
-		player = self.player
-
-		if not player.is_climbing():
-			return
-
-		stage = self.stage
-		ladder = stage.ladder_behind(player.get_rect())
-
-		if not player.is_climbing_over():
-			if player.get_top() <= ladder.get_top() and player.get_position().y >= ladder.get_top():
-				player.climb_over()
-			elif player.get_position().y < ladder.get_top():
-				player.climb_off(ladder.get_top())
-		else:
-			if player.get_position().y < ladder.get_top():
-				player.climb_off(ladder.get_top())
-			elif player.get_top() > ladder.get_top():
-				player.stop_climbing_over()
-
-	def apply_gravity(self):
-		player = self.player
-
-		if player.is_climbing():
-			return
-
-		if player.is_falling():
-			v = player.get_velocity()
-			if v.y == 0:
-				player.accelerate(0, 1)
-			elif v.y < TERMINAL_VELOCITY:
-				player.accelerate(0, 1)
-			else:
-				player.set_velocity_y(TERMINAL_VELOCITY)
-		else:
-			stage = self.stage
-			prect = player.get_rect()
-			platform_below = stage.platform_below(prect)
-			ladder_behind = stage.ladder_behind(prect)
-			ladder_below = stage.ladder_below(prect)
-
-			if not platform_below and not ladder_below and not ladder_behind:
-				player.fall()
 
 	def render_menu(self):
 		delta = self.clock.tick(FPS) / 1000
@@ -1198,10 +1298,59 @@ class Game:
 			elif player.get_right() > mw:
 				player.collide_right(mw)
 
-		# colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.enemy_sprite_group))
-		# if len(colliding_enemies) > 0:
-		# 	player.damage(1)
+		if not player.is_damaged():
+			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.enemy_sprite_group))
+			if len(colliding_enemies) > 0:
+				enemy = colliding_enemies[0]
+				print('enemy hit epos=%d,%d ppos=%d, %d'%(enemy.get_position().x, enemy.get_position().y, player.get_position().x, player.get_position().y))
+				player.damage(enemy.get_damage())
 
+		weapon = player.get_weapon()
+		weapon.check_hits(stage.enemy_sprite_group)
+
+	def check_climb(self):
+		player = self.player
+
+		if not player.is_climbing():
+			return
+
+		stage = self.stage
+		ladder = stage.ladder_behind(player.get_rect())
+
+		if not player.is_climbing_over():
+			if player.get_top() <= ladder.get_top() and player.get_position().y >= ladder.get_top():
+				player.climb_over()
+			elif player.get_position().y < ladder.get_top():
+				player.climb_off(ladder.get_top())
+		else:
+			if player.get_position().y < ladder.get_top():
+				player.climb_off(ladder.get_top())
+			elif player.get_top() > ladder.get_top():
+				player.stop_climbing_over()
+
+	def apply_gravity(self):
+		player = self.player
+
+		if player.is_climbing():
+			return
+
+		if player.is_falling():
+			v = player.get_velocity()
+			if v.y == 0:
+				player.accelerate(0, 1)
+			elif v.y < TERMINAL_VELOCITY:
+				player.accelerate(0, 1)
+			else:
+				player.set_velocity_y(TERMINAL_VELOCITY)
+		else:
+			stage = self.stage
+			prect = player.get_rect()
+			platform_below = stage.platform_below(prect)
+			ladder_behind = stage.ladder_behind(prect)
+			ladder_below = stage.ladder_below(prect)
+
+			if not platform_below and not ladder_below and not ladder_behind:
+				player.fall()
 
 	def grab_ladder_behind(self, player):
 		stage = self.stage
@@ -1234,6 +1383,7 @@ class Game:
 
 		buffer = self.buffer
 		sprites = self.sprites
+		hud = self.hud
 		stage = self.stage
 		area = self.area
 		screen = self.screen
@@ -1244,10 +1394,11 @@ class Game:
 		self.check_collision(player)
 		stage.update_enemies(player)
 
-		player.update_status()
+		player.update_status(delta)
 
 		sprites.update(delta)
 		stage.update(delta)
+		hud.update(delta)
 
 		background_color = stage.get_background_color()
 
@@ -1255,6 +1406,7 @@ class Game:
 
 		stage.draw(buffer)
 		sprites.draw(buffer)
+		hud.draw(buffer)
 
 		if PLAYER_DEBUG:
 			pygame.draw.rect(buffer, (0, 255, 0), player.rect)
@@ -1280,7 +1432,7 @@ class Game:
 			if event.key == pygame.K_RIGHT:
 				if event.type == pygame.KEYDOWN:
 					debug('R Down')
-					if not player.is_climbing():
+					if not player.is_climbing() and not player.is_warping():
 						player.move_right()
 				elif event.type == pygame.KEYUP:
 					debug('R Up')
@@ -1288,7 +1440,7 @@ class Game:
 			elif event.key == pygame.K_LEFT:
 				if event.type == pygame.KEYDOWN:
 					debug('L Down')
-					if not player.is_climbing():
+					if not player.is_climbing() and not player.is_warping():
 						player.move_left()
 				elif event.type == pygame.KEYUP:
 					debug('L Up')
@@ -1377,6 +1529,7 @@ class Game:
 		if self.mode == MODE_GAME:
 			self.init_player()
 			self.init_stage()
+			self.init_hud()
 		elif self.mode == MODE_MENU:
 			self.init_menu()
 		elif self.mode == MODE_GAME_OVER:
