@@ -740,7 +740,7 @@ class Player(pygame.sprite.Sprite):
 		self.sounds = sounds
 		self.move_speed = 5
 		self.climb_speed = 3
-		self.jump_speed = 10
+		self.jump_speed = 12
 		self.max_hit_points = 28
 		self.hit_points = self.max_hit_points
 		self.stage = None
@@ -894,6 +894,10 @@ class Player(pygame.sprite.Sprite):
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
 
+	def get_future_rect(self):
+		v = self.velocity
+		return Rect((self.get_left() + v.x, self.get_top() + v.y), (self.get_width(), self.get_height()))
+
 	def get_width(self):
 		if self.climbing:
 			return 16
@@ -929,7 +933,6 @@ class Player(pygame.sprite.Sprite):
 		self.direction = direction
 
 	def collide_bottom(self, y):
-		print('Resetting player_y=%d'%y)
 		self.velocity.y = 0
 		self.position.y = int(y - int(self.rect.height / 2))
 
@@ -951,21 +954,53 @@ class Player(pygame.sprite.Sprite):
 			self.reset_animation = True
 			self.sounds.play_sound('land')
 
-		print('collide_bottom new pos=%d,%d'%(self.position.x, self.position.y))
+		print('collide bottom y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
+
+	def collide_bottom_right(self, x, y):
+		self.set_velocity(0, 0)
+		self.position.x = int(x - int(self.rect.width / 2))
+		self.position.y = int(y - int(self.rect.height / 2))
+		self.falling = False
+		self.reset_animation = True
+		self.sounds.play_sound('land')
+		print('collide bottom_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
+
+	def collide_bottom_left(self, x, y):
+		self.set_velocity(0, 0)
+		self.position.x = int(x + int(self.rect.width / 2))
+		self.position.y = int(y - int(self.rect.height / 2))
+		self.falling = False
+		self.reset_animation = True
+		self.sounds.play_sound('land')
+		print('collide bottom_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
 
 	def collide_top(self, y):
 		self.velocity.y = 0
 		self.position.y = int(y + int(self.rect.height / 2))
 		self.falling = True
+		print('collide top y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
 
-		print('collide_top new pos=%d,%d'%(self.position.x, self.position.y))
+	def collide_top_right(self, x, y):
+		self.set_velocity(0, 0)
+		self.position.x = int(x - int(self.rect.width / 2))
+		self.position.y = int(y + int(self.rect.height / 2))
+		self.reset_animation = True
+		self.sounds.play_sound('land')
+		print('collide top_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
+
+	def collide_top_left(self, x, y):
+		self.set_velocity(0, 0)
+		self.position.x = int(x + int(self.rect.width / 2))
+		self.position.y = int(y + int(self.rect.height / 2))
+		self.reset_animation = True
+		self.sounds.play_sound('land')
+		print('collide top_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
 
 	def collide_right(self, x):
 		self.velocity.x = 0
 		self.position.x = int(x - int(self.rect.width / 2))
 		self.reset_animation = True
-
-		print('collide_right new pos=%d,%d'%(self.position.x, self.position.y))
+		print('collide right x=%d pos=%d,%d'%(x, self.position.x, self.position.y))
 
 	def collide_left(self, x):
 		self.velocity.x = 0
@@ -1305,24 +1340,41 @@ class Game:
 		if len(colliding_platforms) > 0:
 			p = player.get_position()
 			for platform in colliding_platforms:
-				if v.y > 0 and platform.get_top() < player.get_bottom():
-					print('collision BOTTOM platform_top=%d bottom=%d pos=%d,%d'%(platform.get_top(), player.get_bottom(), p.x, p.y))
-					player.collide_bottom(platform.get_top())
-				elif v.y < 0 and platform.get_bottom() > player.get_top():
-					print('collision TOP platform_bottom=%d top=%d pos=%d,%d'%(platform.get_bottom(), player.get_top(), p.x, p.y))
-					player.collide_top(platform.get_bottom())
+				pleft, pright, ptop, pbottom, pwidth, pheight = platform.get_left(), platform.get_right(), platform.get_top(), platform.get_bottom(), platform.get_width(), platform.get_height()
+				left, right, top, bottom = player.get_left(), player.get_right(), player.get_top(), player.get_bottom()
 
-				if v.x > 0 and platform.get_left() < player.get_right() and platform.get_top() < player.get_bottom():
-					print('collision RIGHT platform_left=%d right=%d pos=%d,%d'%(platform.get_left(), player.get_right(), p.x, p.y))
-					player.collide_right(platform.get_left())
-				elif v.x < 0 and platform.get_right() > player.get_left() and platform.get_top() < player.get_bottom():
-					print('collision LEFT platform_right=%d left=%d pos=%d,%d'%(platform.get_right(), player.get_left(), p.x, p.y))
-					player.collide_left(platform.get_right())
+				if v.x > 0 and v.y == 0 and pleft < right:
+					player.collide_right(pleft)
+				elif v.x < 0 and v.y == 0 and pright > left:
+					player.collide_left(pright)
+				elif v.y > 0 and v.x == 0 and ptop < bottom :
+					player.collide_bottom(ptop)
+				elif v.y < 0 and v.x == 0 and pbottom > top:
+					player.collide_top(pbottom)
+				elif v.x > 0 and v.y > 0:
+					if p.x >= pleft and p.x <= pright and ptop < bottom:
+						player.collide_bottom(ptop)
+					elif right > pleft and right < pright:
+						player.collide_right(pleft)
+				elif v.x > 0 and v.y < 0:
+					if p.x >= pleft and p.x <= pright and pbottom > top:
+						player.collide_top(pbottom)
+					elif right > pleft and right < pright:
+						player.collide_right(pleft)
+				elif v.x < 0 and v.y > 0:
+					if p.x >= pleft and p.x <= pright and ptop < bottom:
+						player.collide_bottom(ptop)
+					elif left < pright and left > pleft:
+						player.collide_left(pright)
+				elif v.x < 0 and v.y < 0:
+					if p.x >= pleft and p.x <= pright and pbottom > top:
+						player.collide_top(pbottom)
+					elif left < pright and left > pleft:
+						player.collide_left(pright)
 		elif not player.is_climbing() and len(colliding_ladders) > 0:
 			p = player.get_position()
 			for ladder in colliding_ladders:
 				if v.y > 0 and ladder.get_top() < player.get_bottom() and (player.get_bottom() - ladder.get_top()) < PLAYER_HALF_HEIGHT:
-					print('collision BOTTOM ladder_top=%d bottom=%d pos=%d,%d'%(ladder.get_top(), player.get_bottom(), p.x, p.y))
 					player.collide_bottom(ladder.get_top())
 		else:
 			mw, mh = stage.get_map_size()
