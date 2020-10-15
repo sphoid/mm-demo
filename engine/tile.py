@@ -1,0 +1,37 @@
+from pygame import math, sprite
+
+class Tile(sprite.Sprite):
+	def __init__(self, image, stage, *grid_position):
+		super().__init__()
+		self.image = image
+		self.rect = image.get_rect()
+		self.position = math.Vector2(grid_position[0], grid_position[1])
+		self.stage = stage
+
+	def get_width(self):
+		return self.rect.width
+
+	def get_height(self):
+		return self.rect.height
+
+	def get_grid_position(self):
+		return self.grid_position
+
+	def get_position(self):
+		return self.position
+
+	def get_bottom(self):
+		return self.position.y + self.rect.height
+
+	def get_top(self):
+		return self.position.y
+
+	def get_left(self):
+		return self.position.x
+
+	def get_right(self):
+		return self.position.x + self.rect.width
+
+	def update(self, delta):
+		p = self.position
+		self.rect.topleft = int(p.x + self.stage.get_scroll_offset()), int(p.y)

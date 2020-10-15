@@ -1,0 +1,4 @@
+SCALE2X = False
+
+MAP_DEBUG = False
+PLAYER_DEBUG = False
