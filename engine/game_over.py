@@ -1,5 +1,5 @@
 import pygame
-from pygame import display
+from pygame import display, Surface
 from pygame.sprite import Rect
 from .constants import *
 
@@ -7,7 +7,8 @@ class GameOver:
 	def __init__(self, logger, loader, screen, buffer, sounds, music_player, game, **opts):
 		self.logger = logger
 		self.screen = screen
-		self.buffer = buffer
+		# self.buffer = buffer
+		self.buffer = Surface((int(SCREEN_W), int(SCREEN_H)))
 		self.loader = loader
 		self.game = game
 		self.sounds = sounds
@@ -20,7 +21,7 @@ class GameOver:
 	def update(self, delta):
 		self.game_over_time += delta
 
-		if self.game_over_time >= 3:
+		if self.game_over_time >= 5:
 			self.game.set_mode(MODE_MENU)
 
 	def render(self):
@@ -35,7 +36,10 @@ class GameOver:
 		game_over_text = game_over_font.render('Game Over', 0, default_font_color)
 		game_over_rect = game_over_text.get_rect(center=(SCREEN_W/2, SCREEN_H/2))
 
-		screen.blit(game_over_text, game_over_rect)
+		buffer.blit(game_over_text, game_over_rect)
+
+		screen.blit(buffer, buffer.get_rect())
+		# screen.blit(game_over_text, game_over_rect)
 
 		display.flip()
 

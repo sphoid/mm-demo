@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="100" height="25" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="8" nextobjectid="194">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="100" height="25" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="8" nextobjectid="196">
  <tileset firstgid="1" source="tiles-1.tsx"/>
  <objectgroup id="4" name="platforms">
   <object id="153" type="platform" x="0" y="272" width="192" height="16"/>
@@ -120,6 +120,8 @@
   <object id="191" type="tile" gid="27" x="304" y="224" width="16" height="16"/>
  </objectgroup>
  <objectgroup id="7" name="enemies">
-  <object id="180" type="enem" x="544" y="32" width="32" height="32"/>
+  <object id="180" name="e1" type="spinner" x="544" y="32" width="32" height="32"/>
+  <object id="194" name="e2" type="spinner" x="880" y="64" width="32" height="32"/>
+  <object id="195" name="e3" type="spinner" x="1328" y="32" width="32" height="32"/>
  </objectgroup>
 </map>

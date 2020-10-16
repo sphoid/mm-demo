@@ -10,7 +10,8 @@ class Game:
 	def __init__(self, logger, loader, screen, buffer, sounds, music_player, game, **opts):
 		self.logger = logger
 		self.screen = screen
-		self.buffer = buffer
+		# self.buffer = buffer
+		self.buffer = pygame.Surface((int(SCREEN_W/2), int(SCREEN_H/2)))
 		self.loader = loader
 		self.sounds = sounds
 		self.music_player = music_player

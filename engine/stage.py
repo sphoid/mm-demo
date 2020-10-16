@@ -18,6 +18,7 @@ class Stage:
 		self.ladders = {}
 		self.platforms = {}
 		self.tile_sprite_group = sprite.Group()
+		self.enemies = None
 		self.enemy_sprite_group = sprite.Group()
 		self.scroll_offset = 0
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
@@ -50,12 +51,11 @@ class Stage:
 			self.ladders[x, y] = GameObject(Rect((x, y), (width, height)))
 			print('LOAD: Ladder %d,%d %dx%d'%(x, y, width, height))
 
+		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
-			enemy = Enemy(self.spritesheet_loader, self, self.sounds, x, y)
-			self.enemy_sprite_group.add(enemy)
-			# self.enemies.append(enemy)
-			print('LOAD: Enemy %d,%d %dx%d'%(x, y, width, height))
+			self.enemies.load(obj.name, obj.type, x, y)
+			print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y, width, height))
 
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
@@ -93,6 +93,9 @@ class Stage:
 	def get_map_height(self):
 		return self.map_size[1]
 
+	def get_map_right(self):
+		return self.area.width - self.get_scroll_offset()
+
 	def get_scroll_offset(self):
 		return self.scroll_offset
 
@@ -112,6 +115,12 @@ class Stage:
 		# print('area_width=%d map_width=%d scroll_offset=%d'%(a.width, w, self.scroll_offset))
 
 	def update_enemies(self, player):
+		spawned_enemies = self.enemies.spawn_nearby(-self.scroll_offset + self.area.width)
+
+		for enemy in spawned_enemies:
+			print(enemy)
+			self.enemy_sprite_group.add(enemy)
+
 		for enemy in self.enemy_sprite_group:
 			enemy.react(player)
 

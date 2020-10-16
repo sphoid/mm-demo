@@ -1,5 +1,5 @@
 import pygame
-from pygame import display
+from pygame import display, Surface
 from pygame.sprite import Rect
 from .constants import *
 
@@ -7,7 +7,8 @@ class Menu:
 	def __init__(self, logger, loader, screen, buffer, sounds, music_player, game, **opts):
 		self.logger = logger
 		self.screen = screen
-		self.buffer = buffer
+		# self.buffer = buffer
+		self.buffer = Surface((int(SCREEN_W), int(SCREEN_H)))
 		self.loader = loader
 		self.game = game
 		self.sounds = sounds
@@ -36,7 +37,7 @@ class Menu:
 		if self.prompt_blinking and self.menu_time >= 0.25:
 			self.menu_time = 0
 			self.prompt_blinking = False
-		elif not self.prompt_blinking and self.menu_time >= 0.5:
+		elif not self.prompt_blinking and self.menu_time >= 1:
 			self.menu_time = 0
 			self.prompt_blinking = True
 
@@ -51,8 +52,13 @@ class Menu:
 		prompt_text = prompt_font.render('Press Enter to start', 0, prompt_font_color)
 		prompt_rect = prompt_text.get_rect(center=(round(SCREEN_W/2), round(SCREEN_H/2) + 50))
 
-		screen.blit(title_text, title_rect)
-		screen.blit(prompt_text, prompt_rect)
+		buffer.blit(title_text, title_rect)
+		buffer.blit(prompt_text, prompt_rect)
+
+		screen.blit(buffer, buffer.get_rect())
+
+		# screen.blit(title_text, title_rect)
+		# screen.blit(prompt_text, prompt_rect)
 
 		display.flip()
 
