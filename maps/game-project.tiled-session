@@ -13,10 +13,10 @@
         },
         "level-1.tmx": {
             "scale": 1.5,
-            "selectedLayer": 0,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 359.33333333333326,
-                "y": 155.33333333333334
+                "x": 319.33333333333326,
+                "y": 262.6666666666667
             }
         },
         "test.tmx": {
@@ -48,9 +48,11 @@
             "scaleInEditor": 1
         }
     },
+    "map.height": 1000,
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 16,
     "map.tileWidth": 16,
+    "map.width": 1000,
     "openFiles": [
         "tiles-1.tsx",
         "tiles-2.tsx",

@@ -33,11 +33,14 @@ class Enemies:
 		return enemies
 
 	def spawn(self, type, name, *start_position):
-		if type == 'spinner':
-			print('spawn: spinner pos=%d,%d'%(start_position[0], start_position[1]))
-			return Spinner(name, self.spritesheet, self.stage, self.sounds, self, start_position[0], start_position[1])
+		if type == 'helichomper':
+			enemy = HeliChomper(name, self.spritesheet, self.stage, self.sounds, self, start_position[0], start_position[1])
 		else:
 			SystemExit('Invalid enemy type %s'%type)
+
+		print('spawn: %s pos=%d,%d'%(enemy.name, start_position[0], start_position[1]))
+
+		return enemy
 
 	def kill(self, name):
 		self.enemies[name]['count'] -= 1
@@ -187,7 +190,7 @@ class Enemy(sprite.Sprite):
 		if self.hit_points <= 0:
 			self.die()
 
-class Spinner(Enemy):
+class HeliChomper(Enemy):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, *position):
 		super().__init__(name, spritesheet, stage,sounds, enemies, position[0], position[1], direction=0, move_speed_x=2, move_speed_y=5, moving=True, hit_points=1, damage=4)
 

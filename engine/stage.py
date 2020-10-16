@@ -118,7 +118,6 @@ class Stage:
 		spawned_enemies = self.enemies.spawn_nearby(-self.scroll_offset + self.area.width)
 
 		for enemy in spawned_enemies:
-			print(enemy)
 			self.enemy_sprite_group.add(enemy)
 
 		for enemy in self.enemy_sprite_group:

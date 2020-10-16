@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="100" height="25" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="8" nextobjectid="196">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="100" height="25" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="8" nextobjectid="227">
  <tileset firstgid="1" source="tiles-1.tsx"/>
  <objectgroup id="4" name="platforms">
   <object id="153" type="platform" x="0" y="272" width="192" height="16"/>
@@ -11,9 +11,13 @@
   <object id="179" type="platform" x="144" y="144" width="272" height="16"/>
   <object id="192" type="platform" x="400" y="160" width="16" height="64"/>
   <object id="193" type="platform" x="304" y="208" width="96" height="16"/>
+  <object id="223" type="platform" x="1280" y="240" width="32" height="16"/>
+  <object id="224" type="platform" x="1360" y="240" width="32" height="16"/>
+  <object id="225" type="platform" x="1456" y="240" width="144" height="16"/>
  </objectgroup>
  <objectgroup id="5" name="ladders">
   <object id="152" type="ladder" x="128" y="144" width="16" height="128"/>
+  <object id="226" type="ladder" x="1552" y="0" width="16" height="208"/>
  </objectgroup>
  <objectgroup id="6" name="tiles">
   <object id="77" type="tile" gid="31" x="48" y="288" width="16" height="16"/>
@@ -118,10 +122,36 @@
   <object id="189" type="tile" gid="28" x="352" y="224" width="16" height="16"/>
   <object id="190" type="tile" gid="28" x="320" y="224" width="16" height="16"/>
   <object id="191" type="tile" gid="27" x="304" y="224" width="16" height="16"/>
+  <object id="196" gid="31" x="1280" y="256" width="16" height="16"/>
+  <object id="197" gid="31" x="1296" y="256" width="16" height="16"/>
+  <object id="198" gid="31" x="1360" y="256" width="16" height="16"/>
+  <object id="200" gid="31" x="1376" y="256" width="16" height="16"/>
+  <object id="201" gid="31" x="1456" y="256" width="16" height="16"/>
+  <object id="202" gid="31" x="1472" y="256" width="16" height="16"/>
+  <object id="203" gid="31" x="1488" y="256" width="16" height="16"/>
+  <object id="204" gid="31" x="1504" y="256" width="16" height="16"/>
+  <object id="205" gid="31" x="1536" y="256" width="16" height="16"/>
+  <object id="206" gid="31" x="1520" y="256" width="16" height="16"/>
+  <object id="207" gid="31" x="1552" y="256" width="16" height="16"/>
+  <object id="208" gid="31" x="1568" y="256" width="16" height="16"/>
+  <object id="209" gid="31" x="1584" y="256" width="16" height="16"/>
+  <object id="210" gid="44" x="1552" y="208" width="16" height="16"/>
+  <object id="211" gid="44" x="1552" y="192" width="16" height="16"/>
+  <object id="212" gid="44" x="1552" y="176" width="16" height="16"/>
+  <object id="213" gid="44" x="1552" y="160" width="16" height="16"/>
+  <object id="214" gid="44" x="1552" y="144" width="16" height="16"/>
+  <object id="215" gid="44" x="1552" y="128" width="16" height="16"/>
+  <object id="216" gid="44" x="1552" y="112" width="16" height="16"/>
+  <object id="217" gid="44" x="1552" y="96" width="16" height="16"/>
+  <object id="218" gid="44" x="1552" y="80" width="16" height="16"/>
+  <object id="219" gid="44" x="1552" y="64" width="16" height="16"/>
+  <object id="220" gid="44" x="1552" y="48" width="16" height="16"/>
+  <object id="221" gid="44" x="1552" y="32" width="16" height="16"/>
+  <object id="222" gid="44" x="1552" y="16" width="16" height="16"/>
  </objectgroup>
  <objectgroup id="7" name="enemies">
-  <object id="180" name="e1" type="spinner" x="544" y="32" width="32" height="32"/>
-  <object id="194" name="e2" type="spinner" x="880" y="64" width="32" height="32"/>
-  <object id="195" name="e3" type="spinner" x="1328" y="32" width="32" height="32"/>
+  <object id="180" name="e1" type="helichomper" x="544" y="32" width="32" height="32"/>
+  <object id="194" name="e2" type="helichomper" x="880" y="64" width="32" height="32"/>
+  <object id="195" name="e3" type="helichomper" x="1328" y="32" width="32" height="32"/>
  </objectgroup>
 </map>

@@ -121,6 +121,10 @@ class Game:
 		stage = self.stage
 		ladder = stage.ladder_behind(player.get_rect())
 
+		if ladder is None:
+			player.fall()
+			return
+
 		if not player.is_climbing_over():
 			if player.get_top() <= ladder.get_top() and player.get_position().y >= ladder.get_top():
 				player.climb_over()

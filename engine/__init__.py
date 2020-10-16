@@ -7,7 +7,7 @@ from .sprite import *
 from .sound import *
 from .object import *
 from .tile import *
-from .enemy import *
+from .enemy import Enemies
 from .stage import *
 from .weapon import *
 from .hud import *
