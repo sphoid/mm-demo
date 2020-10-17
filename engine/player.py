@@ -145,7 +145,7 @@ class Player(sprite.Sprite):
 	def set_stage(self, stage):
 		self.stage = stage
 		self.map_size = stage.get_map_size()
-		print(stage.get_warp_start_position())
+		# print(stage.get_warp_start_position())
 		self.warp(stage.get_warp_start_position())
 
 	def get_stage(self):
@@ -167,12 +167,7 @@ class Player(sprite.Sprite):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
 
 	def get_width(self):
-		if self.climbing or self.falling:
-			return 16
-		else:
-			return 24
-
-		return self.rect.width
+		return 16
 
 	def get_height(self):
 		return self.rect.height
@@ -400,6 +395,9 @@ class Player(sprite.Sprite):
 		self.hit_points -= damage
 		self.stop_x()
 
+		if self.climbing:
+			self.release_ladder()
+
 		if self.direction:
 			self.accelerate(-force, 0)
 		else:
@@ -429,10 +427,11 @@ class Player(sprite.Sprite):
 		self.position.x += v.x
 		self.position.y += v.y
 
+		# print('pos=%d,%d'%(self.position.x, self.position.y))
+
 	def update_status(self, delta):
 		if self.arriving:
 			self.arrive_time += delta
-			print('arrive time %f'%self.arrive_time)
 			if self.arrive_time >= 0.05:
 				self.arriving = False
 				self.reset_animation = True

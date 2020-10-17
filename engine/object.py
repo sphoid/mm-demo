@@ -5,6 +5,16 @@ class GameObject:
 	def __init__(self, rect, name=None):
 		self.name = name
 		self.rect = rect
+		self.flagged = False
+
+	def is_flagged(self):
+		return self.flagged
+
+	def flag(self):
+		self.flagged = True
+
+	def unflag(self):
+		self.flag = False
 
 	def get_name(self):
 		return self.name

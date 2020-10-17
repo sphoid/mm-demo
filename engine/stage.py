@@ -1,4 +1,4 @@
-from pygame import sprite
+from pygame import sprite, draw
 from pygame.sprite import Rect
 from functools import reduce
 from .constants import *
@@ -35,8 +35,8 @@ class Stage:
 		self.warp_start_position = 0, 0
 		self.warp_land_position = 0, 0
 
-		if hasattr(opts, 'map_debug'):
-			self.map_debug = map_debug
+		if 'map_debug' in opts:
+			self.map_debug = opts['map_debug']
 		else:
 			self.map_debug = False
 
@@ -78,10 +78,10 @@ class Stage:
 			x, y, width, height, type = int(obj.x), int(obj.y), int(obj.width), int(obj.height), obj.type
 			if obj.type == 'start':
 				self.warp_start_position = math.Vector2(x, y)
-				print('Warp start=%d,%d'%(self.warp_start_position.x, self.warp_start_position.y))
+				# print('Warp start=%d,%d'%(self.warp_start_position.x, self.warp_start_position.y))
 			elif obj.type == 'land':
 				self.warp_land_position = math.Vector2(x, y)
-				print('Warp land=%d,%d'%(self.warp_land_position.x, self.warp_land_position.y))
+				# print('Warp land=%d,%d'%(self.warp_land_position.x, self.warp_land_position.y))
 
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
@@ -120,7 +120,6 @@ class Stage:
 			return colliding_zones[0]
 		elif len(colliding_zones) > 1:
 			next_zone = list(filter((lambda zone: zone.get_name() != self.zone.get_name()), colliding_zones))[0]
-			print('in zone %s'%next_zone.get_name())
 			return next_zone
 
 	def platform_below(self, rect):
@@ -202,8 +201,19 @@ class Stage:
 		self.enemy_sprite_group.draw(surface)
 
 		if self.map_debug:
+			view = self.view
+			offset = view.get_offset()
+
 			for platform in self.platforms.values():
-				pygame.draw.rect(surface, (0, 0, 255), platform.rect)
+				prect = platform.get_rect()
+				pvrect = Rect((prect.left - offset.x, prect.top - offset.y), (platform.get_width(), platform.get_height()))
+				if platform.is_flagged():
+					color = (255, 255, 0)
+				else:
+					color = (0, 0, 255)
+				draw.rect(surface, color, pvrect)
 
 			for ladder in self.ladders.values():
-				pygame.draw.rect(surface, (255,0,0), ladder.rect)
+				lrect = ladder.get_rect()
+				lvrect = Rect((lrect.left - offset.x, lrect.top - offset.y), (ladder.get_width(), ladder.get_height()))
+				draw.rect(surface, (255,0,0), lvrect)
