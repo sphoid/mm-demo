@@ -24,6 +24,7 @@ class Game:
 		self.transitioning = False
 		self.transition_from_zone = None
 		self.transition_to_zone = None
+		self.transition_axis = None
 
 		if 'player_debug' in opts:
 			self.player_debug = opts['player_debug']
@@ -59,8 +60,9 @@ class Game:
 		stage = self.stage
 		player = self.player
 		zone = stage.get_zone()
+		mh = stage.get_map_height()
 
-		if player.get_top() + player.get_height() > zone.get_bottom():
+		if player.get_top() > mh + player.get_height():
 			player.die()
 
 	def check_collision(self):
@@ -119,12 +121,13 @@ class Game:
 				if v.y > 0 and ladder.get_top() < player.get_bottom() and (player.get_bottom() - ladder.get_top()) < PLAYER_HALF_HEIGHT:
 					player.collide_bottom(ladder.get_top())
 		else:
-			mw, mh = stage.get_map_size()
+			view = self.view
+			offset = view.get_offset()
 
-			if player.get_left() < 0:
-				player.collide_left(0)
-			elif player.get_right() > mw:
-				player.collide_right(mw)
+			if player.get_left() < offset.x:
+				player.collide_left(offset.x)
+			elif player.get_right() > (offset.x + view.get_width()):
+				player.collide_right(offset.x + view.get_width())
 
 		if not player.is_damaged():
 			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.enemy_sprite_group))
@@ -207,28 +210,39 @@ class Game:
 		return False
 
 	def transition_zones(self, from_zone, to_zone):
-		self.transitioning = True
-		self.transition_from_zone = from_zone
-		self.transition_to_zone = to_zone
+		if not self.transitioning:
+			print('transition to zone %s'%to_zone.get_name())
+			self.transitioning = True
+			self.transition_from_zone = from_zone
+			self.transition_to_zone = to_zone
+
+			from_p = from_zone.get_position()
+			to_p = to_zone.get_position()
+
+			if to_p.y != from_p.y:
+				self.transition_axis = 'y'
+			else:
+				self.transition_axis = 'x'
 
 	def stop_transition_zones(self):
 		self.stage.set_zone(self.transition_to_zone.get_name())
 		self.transitioning = False
 		self.transition_from_zone = None
 		self.transition_to_zone = None
+		self.transition_axis = None
 
 	def check_zone_transition(self):
-		if not self.player.is_climbing():
-			return
+		player = self.player
 
-		zone = self.stage.get_zone()
-		in_zone = self.stage.in_zone(self.player)
+		if player.is_climbing() or player.is_falling():
+			zone = self.stage.get_zone()
+			in_zone = self.stage.in_zone(self.player)
 
-		if not in_zone or not zone:
-			return
+			if not in_zone or not zone:
+				return
 
-		if zone.get_name() != in_zone.get_name():
-			self.transition_zones(zone, in_zone)
+			if zone.get_name() != in_zone.get_name():
+				self.transition_zones(zone, in_zone)
 
 	def update_scrolling(self):
 		view = self.view
@@ -239,16 +253,20 @@ class Game:
 			to_p = s_to.get_position()
 			offset = view.get_offset()
 
-			if to_p.y < from_p.y and offset.y > to_p.y:
-				view.set_offset(math.Vector2(offset.x, offset.y - self.transition_speed))
-			elif to_p.y > from_p.y and offset.y < to_p.y:
-				view.set_offset(math.Vector2(offset.x, offset.y + self.transition_speed))
-			elif to_p.x > from_p.x and offset.x < to_p.x:
-				view.set_offset(math.Vector2(offset.x + self.transition_speed, offset.y))
-			elif to_p.x < from_p.x and offset.x > to_p.x:
-				view.set_offset(math.Vector2(offset.x - self.transition_speed, offset.y))
-			else:
-				self.stop_transition_zones()
+			if self.transition_axis == 'y':
+				if to_p.y < from_p.y and offset.y > to_p.y:
+					view.set_offset(math.Vector2(offset.x, offset.y - self.transition_speed))
+				elif to_p.y > from_p.y and offset.y < to_p.y:
+					view.set_offset(math.Vector2(offset.x, offset.y + self.transition_speed))
+				else:
+					self.stop_transition_zones()
+			elif self.transition_axis == 'x':
+				if to_p.x > from_p.x and offset.x < to_p.x:
+					view.set_offset(math.Vector2(offset.x + self.transition_speed, offset.y))
+				elif to_p.x < from_p.x and offset.x > to_p.x:
+					view.set_offset(math.Vector2(offset.x - self.transition_speed, offset.y))
+				else:
+					self.stop_transition_zones()
 		else:
 			stage, player = self.stage, self.player
 			vw, vh = view.get_size()
