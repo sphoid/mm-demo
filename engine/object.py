@@ -1,11 +1,19 @@
 from pygame.sprite import Rect
+from pygame import math
 
 class GameObject:
-	def __init__(self, rect):
+	def __init__(self, rect, name=None):
+		self.name = name
 		self.rect = rect
+
+	def get_name(self):
+		return self.name
 
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
+
+	def get_position(self):
+		return math.Vector2(self.get_left(), self.get_top())
 
 	def get_bottom(self):
 		return self.rect.bottom
@@ -24,6 +32,9 @@ class GameObject:
 
 	def get_height(self):
 		return self.rect.height
+
+	def get_size(self):
+		return self.get_width(), self.get_height()
 
 	def collides_with(self, rect):
 		return self.get_rect().colliderect(rect)

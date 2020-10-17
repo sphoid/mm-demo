@@ -21,7 +21,7 @@ class GameLoop:
 		self.resolution = width, height = self.config.get_screen_resolution()
 		self.logger.debug('resolution: %dx%d' % (width, height))
 		self.screen = pygame.display.set_mode(self.resolution, pygame.HWSURFACE|pygame.DOUBLEBUF)
-		self.buffer = pygame.Surface((round(SCREEN_W/2), round(SCREEN_H/2)))
+		self.buffer = pygame.Surface((int(SCREEN_W), int(SCREEN_H)))
 
 	def init_audio(self):
 		self.mixer = pygame.mixer.init()
@@ -51,11 +51,11 @@ class GameLoop:
 
 	def set_mode(self, mode_id):
 		if mode_id == MODE_MENU:
-			self.mode = Menu(self.logger, self.loader, self.screen, self.buffer, self.sounds, self.music_player, self)
+			self.mode = Menu(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
 		elif mode_id == MODE_GAME:
-			self.mode = Game(self.logger, self.loader, self.screen, self.buffer, self.sounds, self.music_player, self, player_debug=PLAYER_DEBUG, map_debug=MAP_DEBUG)
+			self.mode = Game(self.logger, self.loader, self.screen, self.sounds, self.music_player, self, player_debug=PLAYER_DEBUG, map_debug=MAP_DEBUG)
 		elif mode_id == MODE_GAME_OVER:
-			self.mode = GameOver(self.logger, self.loader, self.screen, self.buffer, self.sounds, self.music_player, self)
+			self.mode = GameOver(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
 
 	def start(self):
 		self.init_screen()

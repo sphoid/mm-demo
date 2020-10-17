@@ -9,25 +9,27 @@ class Player(sprite.Sprite):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 		self.sounds = sounds
-		self.move_speed = 3
+		self.move_speed = 2
 		self.climb_speed = 2
-		self.jump_speed = 9
+		self.jump_speed = 8
 		self.max_hit_points = 28
 		self.hit_points = self.max_hit_points
 		self.stage = None
 
 		self.damage_time = 0
+		self.arrive_time = 0
 
 		self.max_height = 48
 		self.max_width = 48
 
 		self.velocity = math.Vector2(0, 0)
 		self.position = math.Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
+		self.view = None
 
 		self.current_time = 0
 		self.direction = 1
-		self.falling = True
-		self.warping = True
+		self.falling = False
+		self.warping = False
 		self.arriving = False
 		self.climbing = False
 		self.climbing_over = False
@@ -122,8 +124,8 @@ class Player(sprite.Sprite):
 				dict(duration=0, image=image_at(Rect((670, 0), (8, 32)), -1))
 			]),
 			warp_arrive=Animation([
-				dict(duration=0.1, image=image_at(Rect((680, 0), (24, 32)), -1)),
-				dict(duration=0.1, image=image_at(Rect((705, 0), (24, 32)), -1))
+				dict(duration=0.05, image=image_at(Rect((680, 0), (24, 32)), -1)),
+				dict(duration=0.05, image=image_at(Rect((705, 0), (24, 32)), -1))
 			]),
 			damaged_left=Animation([
 				dict(duration=1, image=image_at(Rect((258, 0), (32, 32)), -1))
@@ -143,6 +145,8 @@ class Player(sprite.Sprite):
 	def set_stage(self, stage):
 		self.stage = stage
 		self.map_size = stage.get_map_size()
+		print(stage.get_warp_start_position())
+		self.warp(stage.get_warp_start_position())
 
 	def get_stage(self):
 		return self.stage
@@ -163,8 +167,10 @@ class Player(sprite.Sprite):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
 
 	def get_width(self):
-		if self.climbing:
+		if self.climbing or self.falling:
 			return 16
+		else:
+			return 24
 
 		return self.rect.width
 
@@ -185,10 +191,10 @@ class Player(sprite.Sprite):
 		return int(self.position.y - int(self.rect.height / 2))
 
 	def get_left(self):
-		return int(self.position.x - int(self.rect.width / 2))
+		return int(self.position.x - int(self.get_width() / 2))
 
 	def get_right(self):
-		return int(self.position.x + int(self.rect.width / 2))
+		return int(self.position.x + int(self.get_width() / 2))
 
 	def get_direction(self):
 		return self.direction
@@ -200,15 +206,7 @@ class Player(sprite.Sprite):
 		self.velocity.y = 0
 		self.position.y = int(y - int(self.rect.height / 2))
 
-		if self.warping:
-			self.warping = False
-			self.arriving = True
-			self.reset_animation = True
-		elif self.arriving:
-			self.arriving = False
-			self.reset_animation = True
-			self.sounds.play_sound('warp')
-		elif self.climbing:
+		if self.climbing:
 			self.climbing = False
 			self.climbing_over = False
 			self.reset_animation = True
@@ -316,6 +314,7 @@ class Player(sprite.Sprite):
 		self.velocity.x = 0
 		self.position.x = ladder.get_left() + int(ladder.get_width() / 2)
 		if going_down:
+			self.rect.width = 16
 			self.position.y += int(self.rect.height / 2)
 		self.climbing = True
 		self.reset_animation = True
@@ -351,6 +350,29 @@ class Player(sprite.Sprite):
 		self.velocity.y = 0
 		self.reset_animation = True
 
+	def warp(self, start_position):
+		self.set_position(start_position.x, start_position.y)
+		self.warping = True
+
+	def arrive(self, y):
+		self.velocity.y = 0
+		self.position.y = int(y - int(self.rect.height / 2))
+		self.arrive_time = 0
+		self.warping = False
+		self.arriving = True
+		self.reset_animation = True
+		self.sounds.play_sound('warp')
+
+	def is_arriving(self):
+		return self.arriving
+
+	def stop_arriving(self):
+		self.arriving = False
+		self.reset_animation = True
+
+	def is_warping(self):
+		return self.warping
+
 	def fall(self):
 		self.falling = True
 
@@ -364,6 +386,7 @@ class Player(sprite.Sprite):
 		if self.climbing:
 			self.release_ladder()
 		elif not self.falling:
+			self.rect.width = 16
 			self.accelerate(0, -self.jump_speed)
 			self.falling = True
 
@@ -375,6 +398,7 @@ class Player(sprite.Sprite):
 
 	def damage(self, damage, force=2):
 		self.hit_points -= damage
+		self.stop_x()
 
 		if self.direction:
 			self.accelerate(-force, 0)
@@ -398,7 +422,7 @@ class Player(sprite.Sprite):
 		self.reset_animation = True
 
 	def get_map_offset(self):
-		return self.stage.get_scroll_offset()
+		return self.stage.get_scroll_offset_x()
 
 	def update_position(self):
 		v = self.get_velocity()
@@ -406,20 +430,28 @@ class Player(sprite.Sprite):
 		self.position.y += v.y
 
 	def update_status(self, delta):
-		p = self.get_position()
-		a = self.area
-		if p.y > a.height:
-			self.die()
+		if self.arriving:
+			self.arrive_time += delta
+			print('arrive time %f'%self.arrive_time)
+			if self.arrive_time >= 0.05:
+				self.arriving = False
+				self.reset_animation = True
 
 		if self.damaged:
 			self.damage_time += delta
 			if self.damage_time >= 0.2:
 				self.damaged = False
 				self.stop_x()
-				self.animation_reset = True
+				self.reset_animation = True
 
 		if self.hit_points <= 0:
 			self.die()
+
+	def set_view(self, view):
+		self.view = view
+
+	def get_view(self):
+		return self.view
 
 	def update(self, delta):
 		if self.dead:
@@ -476,15 +508,6 @@ class Player(sprite.Sprite):
 
 		self.weapon.update(delta)
 
-		a = self.area
-		mw, mh = self.map_size
-		right_scroll_threshold = round(a.width / 2)
-		left_scroll_threshold = mw - right_scroll_threshold
 		p = self.position
-		if p.x > right_scroll_threshold and p.x < left_scroll_threshold:
-			self.rect.center = right_scroll_threshold, p.y
-		elif p.x >= left_scroll_threshold:
-			diff = p.x - left_scroll_threshold
-			self.rect.center = (right_scroll_threshold + diff), p.y
-		elif p.x <= right_scroll_threshold:
-			self.rect.center = int(self.position.x), int(self.position.y)
+		offset = self.view.get_offset()
+		self.rect.center = p.x - offset.x, p.y - offset.y

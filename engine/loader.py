@@ -55,7 +55,7 @@ class ResourceLoader:
 		return sound
 
 	def load_song(self, filename):
-		filepath = os.path.join('data', 'songs', filename)
+		filepath = os.path.join('data', 'music', filename)
 
 		try:
 			pygame.mixer.music.load(filepath)

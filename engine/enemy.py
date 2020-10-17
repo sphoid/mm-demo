@@ -9,7 +9,7 @@ class Enemies:
 		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
 		self.stage = stage
 		self.sounds = sounds
-		self.spawn_range = 100
+		self.spawn_range = 50
 		self.enemies = dict()
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 
@@ -21,12 +21,13 @@ class Enemies:
 
 	def spawn_nearby(self, x):
 		area, stage = self.area, self.stage
+		view = stage.get_view()
 
 		enemies = list()
 		for name, enemy in self.enemies.items():
 			start_position = enemy['start_position']
 			count = enemy['count']
-			if count == 0 and abs(start_position[0] - x) < self.spawn_range and start_position[0] > stage.get_map_right():
+			if count == 0 and abs(start_position[0] - x) < self.spawn_range and start_position[0] > x:
 				enemy['count'] += 1
 				enemies.append(self.spawn(enemy['type'], name, start_position[0], start_position[1]))
 
@@ -245,7 +246,9 @@ class HeliChomper(Enemy):
 				self.current_time = 0
 
 			p = self.position
-			self.rect.center = int(p.x + self.stage.get_scroll_offset()), int(p.y)
+			view = self.stage.get_view()
+			offset = view.get_offset()
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
 
 			if self.rect.top > self.area.height:
 				self.kill()

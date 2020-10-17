@@ -34,4 +34,6 @@ class Tile(sprite.Sprite):
 
 	def update(self, delta):
 		p = self.position
-		self.rect.topleft = int(p.x + self.stage.get_scroll_offset()), int(p.y)
+		offset = self.stage.get_view().get_offset()
+		self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
+		# self.rect.topleft = int(p.x + self.stage.get_scroll_offset_x()), int(p.y + self.stage.get_scroll_offset_y())

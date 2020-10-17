@@ -15,3 +15,4 @@ from .player import *
 from .menu import *
 from .game import *
 from .game_over import *
+from .view import *

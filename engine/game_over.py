@@ -4,10 +4,9 @@ from pygame.sprite import Rect
 from .constants import *
 
 class GameOver:
-	def __init__(self, logger, loader, screen, buffer, sounds, music_player, game, **opts):
+	def __init__(self, logger, loader, screen, sounds, music_player, game, **opts):
 		self.logger = logger
 		self.screen = screen
-		# self.buffer = buffer
 		self.buffer = Surface((int(SCREEN_W), int(SCREEN_H)))
 		self.loader = loader
 		self.game = game

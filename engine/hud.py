@@ -23,19 +23,21 @@ class LifeMeter(sprite.Sprite):
 		self.load_sprites()
 
 	def get_spritesheet_filename(self):
-		return 'energy-sprites.png'
+		return 'energy-sprites-1.5x.png'
 
 	def load_sprites(self):
 		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
 		image_at = self.spritesheet.image_at
 
-		self.image = image_at(Rect((0, 8), (8, 56)), None, True)
+		self.image = image_at(Rect((0, 12), (11, 83)), None, False)
 		self.rect = self.image.get_rect(left=10, top=10)
 		self.damage_mask_rect = Rect((self.rect.left + 1, self.rect.top), (self.rect.width - 2, 0))
 
 	def draw_damage_mask(self, surface):
 		diff = self.player.get_max_hit_points() - self.player.get_hit_points()
-		damage_mask_rect = Rect((self.rect.left + 1, self.rect.top), (self.rect.width - 2, diff * 4))
+		if diff == 0:
+			return
+		damage_mask_rect = Rect((self.rect.left + 1, self.rect.top), (self.rect.width - 2, diff * 3))
 
 		draw.rect(surface, (0, 0, 0), damage_mask_rect)
 

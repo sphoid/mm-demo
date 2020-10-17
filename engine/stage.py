@@ -1,5 +1,6 @@
 from pygame import sprite
 from pygame.sprite import Rect
+from functools import reduce
 from .constants import *
 from .util import *
 from .object import *
@@ -14,17 +15,25 @@ class Stage:
 		self.spritesheet_loader = spritesheet_loader
 		self.player = None
 		self.map = None
+		self.zone = None
 		self.tiles = {}
+		self.zones = {}
 		self.ladders = {}
 		self.platforms = {}
 		self.tile_sprite_group = sprite.Group()
 		self.enemies = None
 		self.enemy_sprite_group = sprite.Group()
-		self.scroll_offset = 0
+		self.scroll_offset_x = 0
+		self.scroll_offset_y = 0
 		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 		self.center = self.area.width / 2
 		self.map_size = None
 		self.sounds = sounds
+		self.music_track = None
+		self.view = None
+
+		self.warp_start_position = 0, 0
+		self.warp_land_position = 0, 0
 
 		if hasattr(opts, 'map_debug'):
 			self.map_debug = map_debug
@@ -32,24 +41,32 @@ class Stage:
 			self.map_debug = False
 
 	def load_map(self):
-		self.map = self.loader.load_map('level-1.tmx')
+		self.map = self.loader.load_map('level-2.tmx')
 
 		if not self.map_debug:
-			for obj in self.map.get_layer_by_name('tiles'):
-				x, y = int(obj.x), int(obj.y)
-				tile = Tile(obj.image, self, x, y)
+			for x, y, image in self.map.get_layer_by_name('tiles').tiles():
+				rect = image.get_rect()
+				width, height = rect.width, rect.height
+				position = x * width, y * height
+				tile = Tile(image, self, position[0], position[1])
 				self.tiles[x, y] = tile
 				self.tile_sprite_group.add(tile)
+				# print('LOAD: Tile %d,%d %dx%d'%(position[0], position[1], width, height))
+
+		for obj in self.map.get_layer_by_name('zones'):
+			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
+			self.zones[obj.name] = GameObject(Rect((x, y), (width, height)), name=obj.name)
+			print('LOAD: Zone %d,%d %dx%d'%(x, y, width, height))
 
 		for obj in self.map.get_layer_by_name('platforms'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.platforms[x, y] = GameObject(Rect((x, y), (width, height)))
-			print('LOAD: Platform %d,%d %dx%d'%(x, y, width, height))
+			# print('LOAD: Platform %d,%d %dx%d'%(x, y, width, height))
 
 		for obj in self.map.get_layer_by_name('ladders'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.ladders[x, y] = GameObject(Rect((x, y), (width, height)))
-			print('LOAD: Ladder %d,%d %dx%d'%(x, y, width, height))
+			# print('LOAD: Ladder %d,%d %dx%d'%(x, y, width, height))
 
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self)
 		for obj in self.map.get_layer_by_name('enemies'):
@@ -57,12 +74,54 @@ class Stage:
 			self.enemies.load(obj.name, obj.type, x, y)
 			print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y, width, height))
 
+		for obj in self.map.get_layer_by_name('player'):
+			x, y, width, height, type = int(obj.x), int(obj.y), int(obj.width), int(obj.height), obj.type
+			if obj.type == 'start':
+				self.warp_start_position = math.Vector2(x, y)
+				print('Warp start=%d,%d'%(self.warp_start_position.x, self.warp_start_position.y))
+			elif obj.type == 'land':
+				self.warp_land_position = math.Vector2(x, y)
+				print('Warp land=%d,%d'%(self.warp_land_position.x, self.warp_land_position.y))
+
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
+
+		self.music_track = self.map.properties['Music Track']
 
 		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
 
 	def load(self):
 		self.load_map()
+
+		self.zone = self.get_starting_zone()
+		self.scroll_offset_y = self.zone.get_top()
+
+		print("Zone offset %d,%d"%(self.scroll_offset_x, self.scroll_offset_y))
+
+	def get_music_track(self):
+		return self.music_track
+
+	def get_starting_zone(self):
+		return self.zones['z1']
+
+	def get_zone(self):
+		return self.zone
+
+	def set_zone(self, zone_name):
+		self.zone = self.zones[zone_name]
+
+	def in_zone(self, player):
+		prect = player.get_rect()
+		colliding_zones = list(filter((lambda zone: prect.colliderect(zone.rect)), self.zones.values()))
+
+		if len(colliding_zones) == 0:
+			return None
+
+		if len(colliding_zones) == 1:
+			return colliding_zones[0]
+		elif len(colliding_zones) > 1:
+			next_zone = list(filter((lambda zone: zone.get_name() != self.zone.get_name()), colliding_zones))[0]
+			print('in zone %s'%next_zone.get_name())
+			return next_zone
 
 	def platform_below(self, rect):
 		test_rect = Rect((rect.left, rect.top + 1), (rect.width, rect.height))
@@ -84,6 +143,15 @@ class Stage:
 	def get_background_color(self):
 		return hex_to_rgb(self.map.background_color)
 
+	def get_warp_start_position(self):
+		return self.warp_start_position
+
+	def get_warp_land_position(self):
+		return self.warp_land_position
+
+	def get_zone_size(self):
+		return self.zone.get_size()
+
 	def get_map_size(self):
 		return self.map_size
 
@@ -94,28 +162,26 @@ class Stage:
 		return self.map_size[1]
 
 	def get_map_right(self):
-		return self.area.width - self.get_scroll_offset()
+		return self.area.width - self.get_scroll_offset_x()
 
-	def get_scroll_offset(self):
-		return self.scroll_offset
+	def get_scroll_offset_x(self):
+		return self.scroll_offset_x
 
-	def update_scroll_offset(self, player_position):
-		a = self.area
-		w, h = self.map_size
-		right_scroll_threshold = a.width / 2
-		left_scroll_threshold = w - right_scroll_threshold
+	def get_scroll_offset_y(self):
+		return self.scroll_offset_y
 
-		if player_position.x > right_scroll_threshold and player_position.x < left_scroll_threshold:
-			self.scroll_offset = -(player_position.x - right_scroll_threshold)
-		elif player_position.x >= left_scroll_threshold:
-			self.scroll_offset = -(w - a.width)
-		elif player_position.x <= right_scroll_threshold:
-			self.scroll_offset = 0
+	def set_view(self, view):
+		self.view = view
 
-		# print('area_width=%d map_width=%d scroll_offset=%d'%(a.width, w, self.scroll_offset))
+		self.view.set_offset(self.zone.get_position())
+
+	def get_view(self):
+		return self.view
 
 	def update_enemies(self, player):
-		spawned_enemies = self.enemies.spawn_nearby(-self.scroll_offset + self.area.width)
+		view = self.view
+		offset = view.get_offset()
+		spawned_enemies = self.enemies.spawn_nearby(offset.x + view.get_width())
 
 		for enemy in spawned_enemies:
 			self.enemy_sprite_group.add(enemy)

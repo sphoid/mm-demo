@@ -13,10 +13,18 @@
         },
         "level-1.tmx": {
             "scale": 1.5,
-            "selectedLayer": 1,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 319.33333333333326,
-                "y": 262.6666666666667
+                "x": 1288,
+                "y": 264
+            }
+        },
+        "level-2.tmx": {
+            "scale": 1.1425,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 488.40262582056897,
+                "y": 15863.457330415757
             }
         },
         "test.tmx": {
