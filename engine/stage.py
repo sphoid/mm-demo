@@ -30,20 +30,20 @@ class Stage:
 		self.map_size = None
 		self.sounds = sounds
 		self.music_track = None
+		self.start_zone = None
 		self.view = None
 
 		self.warp_start_position = 0, 0
 		self.warp_land_position = 0, 0
 
-		if 'map_debug' in opts:
-			self.map_debug = opts['map_debug']
-		else:
-			self.map_debug = False
+		if 'debug' in opts:
+			self.debug = opts['debug']
 
 	def load_map(self):
 		self.map = self.loader.load_map('level-2.tmx')
+		map_debug = self.debug is not None and self.debug['map_debug']
 
-		if not self.map_debug:
+		if not map_debug:
 			for x, y, image in self.map.get_layer_by_name('tiles').tiles():
 				rect = image.get_rect()
 				width, height = rect.width, rect.height
@@ -86,6 +86,7 @@ class Stage:
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
 		self.music_track = self.map.properties['Music Track']
+		self.start_zone = self.map.properties['Start Zone']
 
 		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
 
@@ -101,7 +102,12 @@ class Stage:
 		return self.music_track
 
 	def get_starting_zone(self):
-		return self.zones['z1']
+		if self.debug and self.debug['start_zone']:
+			zone_name = self.debug['start_zone']
+		else:
+			zone_name = self.start_zone
+
+		return self.zones[zone_name]
 
 	def get_zone(self):
 		return self.zone
@@ -200,7 +206,7 @@ class Stage:
 		self.tile_sprite_group.draw(surface)
 		self.enemy_sprite_group.draw(surface)
 
-		if self.map_debug:
+		if self.debug and self.debug['map_debug']:
 			view = self.view
 			offset = view.get_offset()
 

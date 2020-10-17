@@ -254,13 +254,15 @@ class Player(sprite.Sprite):
 		print('collide top_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
 
 	def collide_right(self, x):
-		self.velocity.x = 0
+		if self.velocity.x > 0:
+			self.velocity.x = 0
 		self.position.x = int(x - int(self.rect.width / 2))
 		self.reset_animation = True
 		print('collide right x=%d pos=%d,%d'%(x, self.position.x, self.position.y))
 
 	def collide_left(self, x):
-		self.velocity.x = 0
+		if self.velocity.x < 0:
+			self.velocity.x = 0
 		self.position.x = int(x + int(self.rect.width / 2))
 		self.reset_animation = True
 
@@ -289,11 +291,17 @@ class Player(sprite.Sprite):
 
 	def move_right(self):
 		self.direction = 1
-		self.accelerate(self.move_speed, 0)
+		if self.velocity.x < 0:
+			self.accelerate(self.move_speed * 2, 0)
+		else:
+			self.accelerate(self.move_speed, 0)
 
 	def move_left(self):
 		self.direction = 0
-		self.accelerate(-self.move_speed, 0)
+		if self.velocity.x > 0:
+			self.accelerate(-(self.move_speed * 2), 0)
+		else:
+			self.accelerate(-self.move_speed, 0)
 
 	def stop_x(self):
 		self.set_velocity_x(0)

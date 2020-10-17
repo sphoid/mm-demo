@@ -26,22 +26,17 @@ class Game:
 		self.transition_to_zone = None
 		self.transition_axis = None
 
-		if 'player_debug' in opts:
-			self.player_debug = opts['player_debug']
+		if 'debug' in opts:
+			self.debug = opts['debug']
 		else:
-			self.player_debug = False
-
-		if 'map_debug' in opts:
-			self.map_debug = opts['map_debug']
-		else:
-			self.map_debug = False
+			self.debug = None
 
 		self.init_stage()
 		self.init_player()
 		self.init_hud()
 
 	def init_stage(self):
-		self.stage = Stage(self.loader, self.spritesheet_loader, self.sounds, map_debug=self.map_debug)
+		self.stage = Stage(self.loader, self.spritesheet_loader, self.sounds, debug=self.debug)
 		self.stage.load()
 		self.stage.set_view(self.view)
 		self.music_player.play(self.stage.get_music_track())
@@ -50,7 +45,12 @@ class Game:
 		self.player = Player(self.spritesheet_loader, self.sounds)
 		self.sprites.add(self.player)
 		self.player.set_view(self.view)
-		self.player.warp(self.stage.get_warp_start_position())
+
+		if self.debug and self.debug['start_position']:
+			pos = self.debug['start_position']
+			self.player.set_position(pos[0], pos[1])
+		else:
+			self.player.warp(self.stage.get_warp_start_position())
 
 	def init_hud(self):
 		self.life_meter = LifeMeter(self.spritesheet_loader, self.sounds, self.player)
@@ -88,32 +88,54 @@ class Game:
 				left, right, top, bottom = player.get_left(), player.get_right(), player.get_top(), player.get_bottom()
 
 				if v.x > 0 and v.y == 0 and pleft < right:
+					print('collide right platform')
+					if self.debug and self.debug['map_debug']:
+						platform.flag()
 					player.collide_right(pleft)
 				elif v.x < 0 and v.y == 0 and pright > left:
+					print('collide left platform')
 					player.collide_left(pright)
 				elif v.y > 0 and v.x == 0 and ptop < bottom :
+					print('collide bottom platform')
 					player.collide_bottom(ptop)
 				elif v.y < 0 and v.x == 0 and pbottom > top:
+					print('collide top platform')
 					player.collide_top(pbottom)
 				elif v.x > 0 and v.y > 0:
 					if p.x >= pleft and p.x <= pright and ptop < bottom:
+						print('collide bottom platform while falling right')
 						player.collide_bottom(ptop)
+
+					elif left < pright and p.x > pright:
+						print('collide left platform while falling right')
+						player.collide_left(pright)
+
 					elif right > pleft and right < pright:
+						print('collide right platform while falling right')
 						player.collide_right(pleft)
 				elif v.x > 0 and v.y < 0:
 					if p.x >= pleft and p.x <= pright and pbottom > top:
+						print('collide top platform while jumping right')
 						player.collide_top(pbottom)
 					elif right > pleft and right < pright:
+						print('collide right platform while jumping right')
 						player.collide_right(pleft)
 				elif v.x < 0 and v.y > 0:
 					if p.x >= pleft and p.x <= pright and ptop < bottom:
+						print('collide bottom platform while falling left')
 						player.collide_bottom(ptop)
+					elif right > pleft and p.x < pleft:
+						print('collide right platform while falling left')
+						player.collide_right(pleft)
 					elif left < pright and left > pleft:
+						print('collide left platform while falling left')
 						player.collide_left(pright)
 				elif v.x < 0 and v.y < 0:
 					if right >= pleft and left <= pright and pbottom > top:
+						print('collide top platform while jumping left')
 						player.collide_top(pbottom)
 					elif left < pright and left > pleft:
+						print('collide left platform while jumping left')
 						player.collide_left(pright)
 		elif not player.is_climbing() and len(colliding_ladders) > 0:
 			p = player.get_position()
@@ -121,13 +143,19 @@ class Game:
 				if v.y > 0 and ladder.get_top() < player.get_bottom() and (player.get_bottom() - ladder.get_top()) < PLAYER_HALF_HEIGHT:
 					player.collide_bottom(ladder.get_top())
 		else:
+			zone = self.stage.get_zone()
+			zpos = zone.get_position()
+			zw = zone.get_width()
 			view = self.view
 			offset = view.get_offset()
+			# print('view offset=%d,%d'%(offset.x, offset.y))
 
-			if player.get_left() < offset.x:
-				player.collide_left(offset.x)
-			elif player.get_right() > (offset.x + view.get_width()):
-				player.collide_right(offset.x + view.get_width())
+			if player.get_left() < zpos.x:
+				print('collide zone left boundary')
+				player.collide_left(zpos.x)
+			elif player.get_right() > (offset.x + zw):
+				print('collide zone right boundary px=%d offsetx=%d vw=%d'%(player.get_right(), offset.x, view.get_width()))
+				player.collide_right(offset.x + zw)
 
 		if not player.is_damaged():
 			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.enemy_sprite_group))
@@ -211,7 +239,6 @@ class Game:
 
 	def transition_zones(self, from_zone, to_zone):
 		if not self.transitioning:
-			print('transition to zone %s'%to_zone.get_name())
 			self.transitioning = True
 			self.transition_from_zone = from_zone
 			self.transition_to_zone = to_zone
@@ -224,6 +251,8 @@ class Game:
 			else:
 				self.transition_axis = 'x'
 
+			print('transition to zone %s axis=%s'%(to_zone.get_name(), self.transition_axis))
+
 	def stop_transition_zones(self):
 		self.stage.set_zone(self.transition_to_zone.get_name())
 		self.transitioning = False
@@ -234,11 +263,14 @@ class Game:
 	def check_zone_transition(self):
 		player = self.player
 
-		if player.is_climbing() or player.is_falling():
+		if player.is_climbing() or (player.is_falling()):
 			zone = self.stage.get_zone()
 			in_zone = self.stage.in_zone(self.player)
 
 			if not in_zone or not zone:
+				return
+
+			if player.is_falling() and in_zone.get_position().y < zone.get_position().y:
 				return
 
 			if zone.get_name() != in_zone.get_name():
@@ -259,6 +291,9 @@ class Game:
 				elif to_p.y > from_p.y and offset.y < to_p.y:
 					view.set_offset(math.Vector2(offset.x, offset.y + self.transition_speed))
 				else:
+					print('arrived at zone %s'% s_to.get_name())
+					print('setting view offset %d,%d'%(offset.x, to_p.y))
+					view.set_offset(math.Vector2(offset.x, to_p.y))
 					self.stop_transition_zones()
 			elif self.transition_axis == 'x':
 				if to_p.x > from_p.x and offset.x < to_p.x:
@@ -266,27 +301,36 @@ class Game:
 				elif to_p.x < from_p.x and offset.x > to_p.x:
 					view.set_offset(math.Vector2(offset.x - self.transition_speed, offset.y))
 				else:
+					print('arrived at zone %s'% s_to.get_name())
+					print('setting view offset %d,%d'%(to_p.x, offset.y))
+					view.set_offset(math.Vector2(to_p.x, offset.y))
 					self.stop_transition_zones()
 		else:
 			stage, player = self.stage, self.player
 			vw, vh = view.get_size()
-			w, h = stage.get_zone_size()
+			# offset = view.get_offset()
+			zone = stage.get_zone()
+			zw, zh = zone.get_size()
+			zpos = zone.get_position()
 
-			if vw == w:
+			if vw == zw:
 				return
 
 			p = player.get_position()
-			right_scroll_threshold = int(vw / 2)
-			left_scroll_threshold = w - right_scroll_threshold
+			right_scroll_threshold = zpos.x + int(vw / 2)
+			left_scroll_threshold = (zpos.x + zw) - int(vw / 2)
 
 			if p.x > right_scroll_threshold and p.x < left_scroll_threshold:
-				offset_x = p.x - right_scroll_threshold
+				# print('scrolling right rthreshold=%d zw=%d zx=%d'%(right_scroll_threshold, zw, zpos.x))
+				offset_x = zpos.x + p.x - right_scroll_threshold
 			elif p.x >= left_scroll_threshold:
-				offset_x = w - vw
+				offset_x = zone.get_position().x + zw - vw
+				# print('scrolling left lthreshold=%d zw=%d zx=%d offsetx=%d'%(left_scroll_threshold, zw, zpos.x, offset_x))
 			elif p.x <= right_scroll_threshold:
-				offset_x = 0
+				# print('not scrolling')
+				offset_x = zpos.x
 
-			self.view.set_offset(math.Vector2(offset_x, self.view.get_offset().y))
+			self.view.set_offset(math.Vector2(offset_x, view.get_offset().y))
 
 	def update(self, delta):
 		player = self.player
@@ -301,10 +345,10 @@ class Game:
 		view = self.view
 
 		player.update_position()
-		self.check_collision()
-		self.check_off_screen()
 		self.check_zone_transition()
 		self.update_scrolling()
+		self.check_collision()
+		self.check_off_screen()
 		stage.update_enemies(player)
 
 		player.update_status(delta)
@@ -334,7 +378,7 @@ class Game:
 
 		stage.draw(buffer)
 
-		if self.player_debug:
+		if self.debug and self.debug['player_debug']:
 			player = self.player
 			prect = player.get_rect()
 			offset = view.get_offset()
@@ -365,7 +409,8 @@ class Game:
 						player.set_direction(1)
 				elif event.type == pygame.KEYUP:
 					debug('R Up')
-					player.stop_x()
+					if player.get_velocity().x > 0:
+						player.stop_x()
 			elif event.key == pygame.K_LEFT:
 				if event.type == pygame.KEYDOWN:
 					debug('L Down')
@@ -375,7 +420,8 @@ class Game:
 						player.set_direction(0)
 				elif event.type == pygame.KEYUP:
 					debug('L Up')
-					player.stop_x()
+					if player.get_velocity().x < 0:
+						player.stop_x()
 			elif event.key == pygame.K_UP:
 				if event.type == pygame.KEYDOWN:
 					debug('U Down')
