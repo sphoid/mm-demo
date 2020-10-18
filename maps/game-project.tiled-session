@@ -79,6 +79,7 @@
         "level-1.tmx",
         "test.tmx"
     ],
+    "resizeMap.removeObjects": false,
     "tileset.lastUsedFormat": "tsx",
     "tileset.spacing": 1,
     "tileset.tileSize": {
