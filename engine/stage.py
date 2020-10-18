@@ -9,7 +9,8 @@ from .enemy import *
 from .hazards import Hazards
 
 class Stage:
-	def __init__(self, loader, spritesheet_loader, sounds, **opts):
+	def __init__(self, config, loader, spritesheet_loader, sounds):
+		self.config = config
 		self.tile_height = 32
 		self.tile_width = 32
 		self.loader = loader
@@ -38,12 +39,11 @@ class Stage:
 		self.warp_start_position = 0, 0
 		self.warp_land_position = 0, 0
 
-		if 'debug' in opts:
-			self.debug = opts['debug']
+		self.debug = self.config.get_debug()
 
 	def load_map(self):
-		self.map = self.loader.load_map('level-2.tmx')
-		map_debug = self.debug is not None and self.debug['map_debug']
+		self.map = self.loader.load_map('cutman.tmx')
+		map_debug = self.debug['map_debug']
 
 		if not map_debug:
 			for x, y, image in self.map.get_layer_by_name('tiles').tiles():
@@ -117,7 +117,7 @@ class Stage:
 		return self.music_track
 
 	def get_starting_zone(self):
-		if self.debug and self.debug['start_zone']:
+		if self.debug['start_zone']:
 			zone_name = self.debug['start_zone']
 		else:
 			zone_name = self.start_zone
@@ -223,7 +223,7 @@ class Stage:
 		self.tile_sprite_group.draw(surface)
 		self.enemy_sprite_group.draw(surface)
 
-		if self.debug and self.debug['map_debug']:
+		if self.debug['map_debug']:
 			view = self.view
 			offset = view.get_offset()
 

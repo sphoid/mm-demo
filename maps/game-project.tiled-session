@@ -11,20 +11,24 @@
         "": {
             "scaleInDock": 1
         },
+        "cutman-tileset.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "level-1.tmx": {
             "scale": 1.5,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 1288,
-                "y": 264
+                "x": 1286,
+                "y": 263.33333333333326
             }
         },
         "level-2.tmx": {
-            "scale": 1.1425,
-            "selectedLayer": 4,
+            "scale": 4,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 488.40262582056897,
-                "y": 15863.457330415757
+                "x": 1924,
+                "y": 652.125
             }
         },
         "test.tmx": {
@@ -36,11 +40,11 @@
             }
         },
         "tiles-1.tsx": {
-            "scaleInDock": 1.5,
+            "scaleInDock": 1,
             "scaleInEditor": 1
         },
         "tiles-2.tsx": {
-            "scaleInDock": 1.5,
+            "scaleInDock": 1,
             "scaleInEditor": 1
         },
         "tiles-3.tsx": {
@@ -52,6 +56,13 @@
             "scaleInEditor": 1
         },
         "tiles-5.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tiles-6.tsx": {
+            "scaleInEditor": 1
+        },
+        "tiles-7.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
         }
@@ -71,11 +82,14 @@
     ],
     "project": "game-project.tiled-project",
     "recentFiles": [
+        "cutman-tileset.tsx",
         "tiles-1.tsx",
         "tiles-2.tsx",
         "tiles-3.tsx",
         "tiles-4.tsx",
         "tiles-5.tsx",
+        "tiles-7.tsx",
+        "tiles-6.tsx",
         "level-1.tmx",
         "test.tmx"
     ],
@@ -85,5 +99,7 @@
     "tileset.tileSize": {
         "height": 16,
         "width": 16
-    }
+    },
+    "tileset.transparentColor": "#00ff00",
+    "tileset.useTransparentColor": true
 }

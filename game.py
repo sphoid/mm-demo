@@ -9,6 +9,17 @@ class GameConfig:
 	def get_screen_resolution(self):
 		return SCREEN_W, SCREEN_H
 
+	def get_map(self):
+		return MAP
+
+	def get_debug(self):
+		return dict(
+			map_debug = MAP_DEBUG,
+			player_debug = PLAYER_DEBUG,
+			start_zone = DEBUG_START_ZONE,
+			start_position = DEBUG_START_POSITION,
+		)
+
 class GameLoop:
 	def __init__(self, game_config, logger, loader):
 		self.config = game_config
@@ -54,7 +65,7 @@ class GameLoop:
 		if mode_id == MODE_MENU:
 			self.mode = Menu(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
 		elif mode_id == MODE_GAME:
-			self.mode = Game(self.logger, self.loader, self.screen, self.sounds, self.music_player, self, debug=self.debug)
+			self.mode = Game(self.config, self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
 		elif mode_id == MODE_GAME_OVER:
 			self.mode = GameOver(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
 

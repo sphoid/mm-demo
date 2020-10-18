@@ -4,7 +4,7 @@
   <property name="Music Track" value="cutman-stage"/>
   <property name="Start Zone" value="z1"/>
  </properties>
- <tileset firstgid="1" source="tiles-6.tsx"/>
+ <tileset firstgid="1" source="cutman-tileset.tsx"/>
  <layer id="1" name="tiles" width="143" height="145">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

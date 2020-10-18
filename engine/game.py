@@ -8,8 +8,9 @@ from .hud import *
 from .view import *
 
 class Game:
-	def __init__(self, logger, loader, screen, sounds, music_player, game, **opts):
+	def __init__(self, config, logger, loader, screen, sounds, music_player, game):
 		self.logger = logger
+		self.config = config
 		self.screen = screen
 		self.buffer = pygame.Surface((int(SCREEN_W / SCALE_FACTOR), int(SCREEN_H / SCALE_FACTOR)))
 		self.loader = loader
@@ -26,17 +27,14 @@ class Game:
 		self.transition_to_zone = None
 		self.transition_axis = None
 
-		if 'debug' in opts:
-			self.debug = opts['debug']
-		else:
-			self.debug = None
+		self.debug = self.config.get_debug()
 
 		self.init_stage()
 		self.init_player()
 		self.init_hud()
 
 	def init_stage(self):
-		self.stage = Stage(self.loader, self.spritesheet_loader, self.sounds, debug=self.debug)
+		self.stage = Stage(self.config, self.loader, self.spritesheet_loader, self.sounds)
 		self.stage.load()
 		self.stage.set_view(self.view)
 		self.music_player.play(self.stage.get_music_track())
@@ -102,7 +100,7 @@ class Game:
 					player.collide_top(pbottom)
 				elif v.x > 0 and v.y == 0 and pleft < right and bottom > ptop:
 					print('collide right platform')
-					if self.debug and self.debug['map_debug']:
+					if self.debug['map_debug']:
 						platform.flag()
 					print('bottom=%d ptop=%d'%(player.get_bottom(), platform.get_top()))
 					player.collide_right(pleft)
@@ -395,7 +393,7 @@ class Game:
 
 		stage.draw(buffer)
 
-		if self.debug and self.debug['player_debug']:
+		if self.debug['player_debug']:
 			player = self.player
 			prect = player.get_rect()
 			offset = view.get_offset()
