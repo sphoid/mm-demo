@@ -92,59 +92,59 @@ class Game:
 				left, right, top, bottom = player.get_left(), player.get_right(), player.get_top(), player.get_bottom()
 
 				if v.y > 0 and v.x == 0 and ptop < bottom :
-					print('collide bottom platform')
+					# print('collide bottom platform')
 					player.collide_bottom(ptop)
-					print('new bottom=%d'%player.get_bottom())
+					# print('new bottom=%d'%player.get_bottom())
 				elif v.y < 0 and v.x == 0 and pbottom > top:
-					print('collide top platform')
+					# print('collide top platform')
 					player.collide_top(pbottom)
 				elif v.x > 0 and v.y == 0 and pleft < right and bottom > ptop:
-					print('collide right platform')
-					if self.debug['map_debug']:
-						platform.flag()
-					print('bottom=%d ptop=%d'%(player.get_bottom(), platform.get_top()))
+					# print('collide right platform')
+					# if self.debug['map_debug']:
+						# platform.flag()
+					# print('bottom=%d ptop=%d'%(player.get_bottom(), platform.get_top()))
 					player.collide_right(pleft)
 				elif v.x < 0 and v.y == 0 and pright > left and bottom > ptop:
-					print('collide left platform')
+					# print('collide left platform')
 					player.collide_left(pright)
 
 				elif v.x > 0 and v.y > 0:
 					if p.x >= pleft and p.x <= pright and ptop < bottom:
-						print('collide bottom platform while falling right')
+						# print('collide bottom platform while falling right')
 						player.collide_bottom(ptop)
-						print('new bottom=%d'%player.get_bottom())
+						# print('new bottom=%d'%player.get_bottom())
 					elif left < pright and p.x > pright:
-						print('collide left platform while falling right')
+						# print('collide left platform while falling right')
 						player.collide_left(pright)
 					elif right > pleft and right < pright:
-						print('collide right platform while falling right')
+						# print('collide right platform while falling right')
 						player.collide_right(pleft)
 
 				elif v.x > 0 and v.y < 0:
 					if p.x >= pleft and p.x <= pright and pbottom > top:
-						print('collide top platform while jumping right')
+						# print('collide top platform while jumping right')
 						player.collide_top(pbottom)
 					elif right > pleft and right < pright:
-						print('collide right platform while jumping right')
+						# print('collide right platform while jumping right')
 						player.collide_right(pleft)
 
 				elif v.x < 0 and v.y > 0:
 					if p.x >= pleft and p.x <= pright and ptop < bottom:
-						print('collide bottom platform while falling left')
+						# print('collide bottom platform while falling left')
 						player.collide_bottom(ptop)
 					elif right > pleft and p.x < pleft:
-						print('collide right platform while falling left')
+						# print('collide right platform while falling left')
 						player.collide_right(pleft)
 					elif left < pright and left > pleft:
-						print('collide left platform while falling left')
+						# print('collide left platform while falling left')
 						player.collide_left(pright)
 
 				elif v.x < 0 and v.y < 0:
 					if right >= pleft and left <= pright and pbottom > top:
-						print('collide top platform while jumping left')
+						# print('collide top platform while jumping left')
 						player.collide_top(pbottom)
 					elif left < pright and left > pleft:
-						print('collide left platform while jumping left')
+						# print('collide left platform while jumping left')
 						player.collide_left(pright)
 
 		elif not player.is_climbing() and len(colliding_ladders) > 0:
@@ -281,11 +281,11 @@ class Game:
 			in_zone = self.stage.in_zone(self.player)
 
 			if not in_zone or not zone:
-				print('Not in any zone')
+				# print('Not in any zone')
 				return
 
 			if player.is_falling() and in_zone.get_position().y < zone.get_position().y:
-				print('Cannot fall into upper zone')
+				# print('Cannot fall into upper zone')
 				return
 
 			if zone.get_name() != in_zone.get_name():
@@ -364,6 +364,7 @@ class Game:
 		self.update_scrolling()
 		self.check_collision()
 		self.check_off_screen()
+
 		stage.update_enemies(player)
 
 		player.update_status(delta)
@@ -417,29 +418,29 @@ class Game:
 		if event.type in (pygame.KEYDOWN, pygame.KEYUP):
 			if event.key == pygame.K_RIGHT:
 				if event.type == pygame.KEYDOWN:
-					debug('R Down')
+					# debug('R Down')
 					if not player.is_climbing() and not player.is_warping():
 						player.move_right()
 					elif player.is_climbing():
 						player.set_direction(1)
 				elif event.type == pygame.KEYUP:
-					debug('R Up')
+					# debug('R Up')
 					if player.get_velocity().x > 0:
 						player.stop_x()
 			elif event.key == pygame.K_LEFT:
 				if event.type == pygame.KEYDOWN:
-					debug('L Down')
+					# debug('L Down')
 					if not player.is_climbing() and not player.is_warping():
 						player.move_left()
 					elif player.is_climbing():
 						player.set_direction(0)
 				elif event.type == pygame.KEYUP:
-					debug('L Up')
+					# debug('L Up')
 					if player.get_velocity().x < 0:
 						player.stop_x()
 			elif event.key == pygame.K_UP:
 				if event.type == pygame.KEYDOWN:
-					debug('U Down')
+					# debug('U Down')
 					if not player.is_climbing():
 						grabbed = self.grab_ladder_behind(player)
 						if grabbed:
@@ -447,12 +448,12 @@ class Game:
 					else:
 						player.climb_up()
 				elif event.type == pygame.KEYUP:
-					debug('U Up')
+					# debug('U Up')
 					if player.is_climbing():
 						player.stop_climbing()
 			elif event.key == pygame.K_DOWN:
 				if event.type == pygame.KEYDOWN:
-					debug('D Down')
+					# debug('D Down')
 					if not player.is_climbing():
 						grabbed = self.grab_ladder_below(player)
 						if grabbed:
@@ -460,16 +461,16 @@ class Game:
 					else:
 						player.climb_down()
 				elif event.type == pygame.KEYUP:
-					debug('D Up')
+					# debug('D Up')
 					if player.is_climbing():
 						player.stop_climbing()
 			elif event.key == pygame.K_SPACE and event.type == pygame.KEYDOWN:
-				debug('Space')
+				# debug('Space')
 				if not player.is_falling():
 					player.jump()
 			elif event.key == pygame.K_f:
 				if event.type == pygame.KEYDOWN:
-					debug('Pew')
+					# debug('Pew')
 					pew = player.shoot()
 					self.sprites.add(pew)
 				elif event.type == pygame.KEYUP:

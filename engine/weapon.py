@@ -12,7 +12,6 @@ class BusterPellet(sprite.Sprite):
 		self.speed = 10
 		self.damage = 1
 		self.view = view
-		# self.stage = stage
 
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
@@ -74,7 +73,9 @@ class Weapon:
 	def shoot(self):
 		player = self.player
 		view = player.get_view()
-		pellet = BusterPellet(self.pellet_image, view, player.get_direction(), player.get_right(), (player.get_top() + int(player.get_height() / 3)))
+		start_pos_x = player.get_right() if player.get_direction() else player.get_left()
+		start_pos_y = player.get_top() + int(player.get_height() / 3)
+		pellet = BusterPellet(self.pellet_image, view, player.get_direction(), start_pos_x, start_pos_y)
 		self.pew_sprite_group.add(pellet)
 
 		self.sounds.play_sound('buster')
@@ -88,16 +89,16 @@ class Weapon:
 					hit = enemy.collides_with(pew.get_rect())
 					if hit:
 						enemy.hit(pew)
+						pew.kill()
 
 	def update(self, delta):
-		# stage = self.player.get_stage()
 		for pew in self.pew_sprite_group:
 			pew.update_position()
 			p = pew.get_position()
 			view = self.player.get_view()
 			offset = view.get_offset()
 
-			if p.x - offset.x > view.get_width() or p.x < 0:
+			if p.x - offset.x > view.get_width() or p.x < offset.x:
 				pew.kill()
 
 		self.pew_sprite_group.update(delta)

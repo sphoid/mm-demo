@@ -17,6 +17,8 @@ class SoundLibrary:
 			buster=load_sound('buster.wav', self.mixer),
 			damage=load_sound('damage.wav', self.mixer),
 			edamage=load_sound('edamage.wav', self.mixer),
+			eshoot=load_sound('eshoot.wav', self.mixer),
+			dink=load_sound('dink.wav', self.mixer),
 		)
 
 	def play_sound(self, sound, blocking=False):

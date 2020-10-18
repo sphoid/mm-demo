@@ -77,7 +77,7 @@ class Stage:
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
-			self.enemies.load(obj.name, obj.type, x, y)
+			self.enemies.load(obj.name, obj.type, x, y, obj.properties)
 			print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y, width, height))
 
 		for obj in self.map.get_layer_by_name('player'):
@@ -200,28 +200,27 @@ class Stage:
 	def get_view(self):
 		return self.view
 
+	def get_active_enemies(self):
+		return self.enemy_sprite_group()
+
 	def update_enemies(self, player):
 		view = self.view
 		offset = view.get_offset()
-		spawned_enemies = self.enemies.spawn_nearby(offset.x + view.get_width())
+		spawned_enemies = self.enemies.spawn_nearby(offset.x + view.get_width(), player)
 
 		for enemy in spawned_enemies:
 			self.enemy_sprite_group.add(enemy)
 
-		for enemy in self.enemy_sprite_group:
-			enemy.react(player)
-
 	def update(self, delta):
-		for enemy in self.enemy_sprite_group:
-			enemy.update_position()
-			enemy.update_status()
-
 		self.tile_sprite_group.update(delta)
 		self.enemy_sprite_group.update(delta)
 
 	def draw(self, surface):
 		self.tile_sprite_group.draw(surface)
 		self.enemy_sprite_group.draw(surface)
+
+		for enemy in self.enemy_sprite_group:
+			enemy.pew_sprite_group.draw(surface)
 
 		if self.debug['map_debug']:
 			view = self.view

@@ -1,16 +1,12 @@
 class Animation:
-	def __init__(self, frames, callback=None):
+	def __init__(self, frames):
 		self.frames = frames
 		self.index = 0
 		self.next_time = frames[self.index]['duration']
-		self.callback = callback
 
 	def reset(self):
 		self.index = len(self.frames) - 1
 		self.next_time = 0
-
-		if self.callback is not None:
-			self.callback(self.index)
 
 	def current(self):
 		return self.frames[self.index]
@@ -24,7 +20,7 @@ class Animation:
 		next_frame = self.frames[self.index]
 		self.next_time = next_frame['duration'] + last_time
 
-		if self.callback is not None:
-			self.callback(self.index)
+		if 'callback' in next_frame:
+			next_frame['callback']()
 
 		return next_frame

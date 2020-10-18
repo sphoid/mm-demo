@@ -102,9 +102,9 @@ class Player(sprite.Sprite):
 				dict(duration=0, image=image_at(Rect((456, 0), (24, 32)), -1, flip=True)),
 			]),
 			climb=Animation([
-				dict(duration=0.05, image=image_at(Rect((224, 0), (16, 32)), -1)),
-				dict(duration=0.05, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True)),
-			], self.toggle_climb_hand_side),
+				dict(duration=0.2, image=image_at(Rect((224, 0), (16, 32)), -1), callback=self.set_direction_right),
+				dict(duration=0.2, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True), callback=self.set_direction_left),
+			]),
 			climb_over=Animation([
 				dict(duration=0, image=image_at(Rect((241, 8), (16, 24)), -1)),
 			]),
@@ -139,8 +139,14 @@ class Player(sprite.Sprite):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-	def toggle_climb_hand_side(self, index):
-		self.climb_hand_side = int(not self.climb_hand_side)
+	def set_direction_left(self):
+		self.direction = 0
+
+	def set_direction_right(self):
+		self.direction = 1
+
+	# def toggle_climb_hand_side(self, index):
+	# 	self.climb_hand_side = int(not self.climb_hand_side)
 
 	def set_stage(self, stage):
 		self.stage = stage
@@ -211,7 +217,7 @@ class Player(sprite.Sprite):
 			self.reset_animation = True
 			self.sounds.play_sound('land')
 
-		print('collide bottom y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
+		# print('collide bottom y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
 
 	def collide_bottom_right(self, x, y):
 		self.set_velocity(0, 0)
@@ -220,7 +226,7 @@ class Player(sprite.Sprite):
 		self.falling = False
 		self.reset_animation = True
 		self.sounds.play_sound('land')
-		print('collide bottom_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
+		# print('collide bottom_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
 
 	def collide_bottom_left(self, x, y):
 		self.set_velocity(0, 0)
@@ -229,13 +235,13 @@ class Player(sprite.Sprite):
 		self.falling = False
 		self.reset_animation = True
 		self.sounds.play_sound('land')
-		print('collide bottom_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
+		# print('collide bottom_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
 
 	def collide_top(self, y):
 		self.velocity.y = 0
 		self.position.y = int(y + int(self.rect.height / 2))
 		self.falling = True
-		print('collide top y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
+		# print('collide top y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
 
 	def collide_top_right(self, x, y):
 		self.set_velocity(0, 0)
@@ -243,7 +249,7 @@ class Player(sprite.Sprite):
 		self.position.y = int(y + int(self.rect.height / 2))
 		self.reset_animation = True
 		self.sounds.play_sound('land')
-		print('collide top_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
+		# print('collide top_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
 
 	def collide_top_left(self, x, y):
 		self.set_velocity(0, 0)
@@ -251,14 +257,14 @@ class Player(sprite.Sprite):
 		self.position.y = int(y + int(self.rect.height / 2))
 		self.reset_animation = True
 		self.sounds.play_sound('land')
-		print('collide top_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
+		# print('collide top_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
 
 	def collide_right(self, x):
 		if self.velocity.x > 0:
 			self.velocity.x = 0
 		self.position.x = int(x - int(self.rect.width / 2))
 		self.reset_animation = True
-		print('collide right x=%d pos=%d,%d'%(x, self.position.x, self.position.y))
+		# print('collide right x=%d pos=%d,%d'%(x, self.position.x, self.position.y))
 
 	def collide_left(self, x):
 		if self.velocity.x < 0:
@@ -266,7 +272,7 @@ class Player(sprite.Sprite):
 		self.position.x = int(x + int(self.rect.width / 2))
 		self.reset_animation = True
 
-		print('collide_left new pos=%d,%d'%(self.position.x, self.position.y))
+		# print('collide_left new pos=%d,%d'%(self.position.x, self.position.y))
 
 	def accelerate(self, *v):
 		self.velocity.x += v[0]
@@ -483,7 +489,7 @@ class Player(sprite.Sprite):
 				if v.y !=0:
 					animation = self.animations['climb']
 				else:
-					animation = self.animations['climb_still_right'] if self.climb_hand_side == 1 else self.animations['climb_still_left']
+					animation = self.animations['climb_still_right'] if self.direction == 1 else self.animations['climb_still_left']
 		else:
 			v = self.velocity
 
