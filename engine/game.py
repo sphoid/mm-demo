@@ -78,8 +78,14 @@ class Game:
 				player.arrive(lp.y)
 			return
 
-		colliding_platforms = list(filter((lambda platform: platform.collides_with(player.get_rect())), stage.platforms.values()))
-		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(player.get_rect())), stage.ladders.values()))
+		colliding_hazards = list(filter((lambda hazard: hazard.collides_with(player.get_rect())), stage.get_hazards()))
+		if len(colliding_hazards) > 0:
+			p = player.get_position()
+			hazard = colliding_hazards[0]
+			player.damage(hazard.get_damage())
+
+		colliding_platforms = list(filter((lambda platform: platform.collides_with(player.get_rect())), stage.get_platforms()))
+		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(player.get_rect())), stage.get_ladders()))
 		v = player.get_velocity()
 		if len(colliding_platforms) > 0:
 			p = player.get_position()
@@ -87,32 +93,35 @@ class Game:
 				pleft, pright, ptop, pbottom, pwidth, pheight = platform.get_left(), platform.get_right(), platform.get_top(), platform.get_bottom(), platform.get_width(), platform.get_height()
 				left, right, top, bottom = player.get_left(), player.get_right(), player.get_top(), player.get_bottom()
 
-				if v.x > 0 and v.y == 0 and pleft < right:
-					print('collide right platform')
-					if self.debug and self.debug['map_debug']:
-						platform.flag()
-					player.collide_right(pleft)
-				elif v.x < 0 and v.y == 0 and pright > left:
-					print('collide left platform')
-					player.collide_left(pright)
-				elif v.y > 0 and v.x == 0 and ptop < bottom :
+				if v.y > 0 and v.x == 0 and ptop < bottom :
 					print('collide bottom platform')
 					player.collide_bottom(ptop)
+					print('new bottom=%d'%player.get_bottom())
 				elif v.y < 0 and v.x == 0 and pbottom > top:
 					print('collide top platform')
 					player.collide_top(pbottom)
+				elif v.x > 0 and v.y == 0 and pleft < right and bottom > ptop:
+					print('collide right platform')
+					if self.debug and self.debug['map_debug']:
+						platform.flag()
+					print('bottom=%d ptop=%d'%(player.get_bottom(), platform.get_top()))
+					player.collide_right(pleft)
+				elif v.x < 0 and v.y == 0 and pright > left and bottom > ptop:
+					print('collide left platform')
+					player.collide_left(pright)
+
 				elif v.x > 0 and v.y > 0:
 					if p.x >= pleft and p.x <= pright and ptop < bottom:
 						print('collide bottom platform while falling right')
 						player.collide_bottom(ptop)
-
+						print('new bottom=%d'%player.get_bottom())
 					elif left < pright and p.x > pright:
 						print('collide left platform while falling right')
 						player.collide_left(pright)
-
 					elif right > pleft and right < pright:
 						print('collide right platform while falling right')
 						player.collide_right(pleft)
+
 				elif v.x > 0 and v.y < 0:
 					if p.x >= pleft and p.x <= pright and pbottom > top:
 						print('collide top platform while jumping right')
@@ -120,6 +129,7 @@ class Game:
 					elif right > pleft and right < pright:
 						print('collide right platform while jumping right')
 						player.collide_right(pleft)
+
 				elif v.x < 0 and v.y > 0:
 					if p.x >= pleft and p.x <= pright and ptop < bottom:
 						print('collide bottom platform while falling left')
@@ -130,6 +140,7 @@ class Game:
 					elif left < pright and left > pleft:
 						print('collide left platform while falling left')
 						player.collide_left(pright)
+
 				elif v.x < 0 and v.y < 0:
 					if right >= pleft and left <= pright and pbottom > top:
 						print('collide top platform while jumping left')
@@ -137,6 +148,7 @@ class Game:
 					elif left < pright and left > pleft:
 						print('collide left platform while jumping left')
 						player.collide_left(pright)
+
 		elif not player.is_climbing() and len(colliding_ladders) > 0:
 			p = player.get_position()
 			for ladder in colliding_ladders:
@@ -180,13 +192,16 @@ class Game:
 			player.fall()
 			return
 
+		p = player.get_position()
 		if not player.is_climbing_over():
-			if player.get_top() <= ladder.get_top() and player.get_position().y >= ladder.get_top():
+			if player.get_top() <= ladder.get_top() and p.y >= ladder.get_top():
 				player.climb_over()
-			elif player.get_position().y < ladder.get_top():
+			elif p.y > ladder.get_bottom():
+				player.climb_off(ladder.get_bottom() + player.get_height())
+			elif p.y < ladder.get_top():
 				player.climb_off(ladder.get_top())
 		else:
-			if player.get_position().y < ladder.get_top():
+			if p.y < ladder.get_top():
 				player.climb_off(ladder.get_top())
 			elif player.get_top() > ladder.get_top():
 				player.stop_climbing_over()
@@ -268,9 +283,11 @@ class Game:
 			in_zone = self.stage.in_zone(self.player)
 
 			if not in_zone or not zone:
+				print('Not in any zone')
 				return
 
 			if player.is_falling() and in_zone.get_position().y < zone.get_position().y:
+				print('Cannot fall into upper zone')
 				return
 
 			if zone.get_name() != in_zone.get_name():

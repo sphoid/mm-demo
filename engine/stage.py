@@ -6,6 +6,7 @@ from .util import *
 from .object import *
 from .tile import *
 from .enemy import *
+from .hazards import Hazards
 
 class Stage:
 	def __init__(self, loader, spritesheet_loader, sounds, **opts):
@@ -20,6 +21,7 @@ class Stage:
 		self.zones = {}
 		self.ladders = {}
 		self.platforms = {}
+		self.hazards = {}
 		self.tile_sprite_group = sprite.Group()
 		self.enemies = None
 		self.enemy_sprite_group = sprite.Group()
@@ -68,6 +70,10 @@ class Stage:
 			self.ladders[x, y] = GameObject(Rect((x, y), (width, height)))
 			# print('LOAD: Ladder %d,%d %dx%d'%(x, y, width, height))
 
+		for obj in self.map.get_layer_by_name('hazards'):
+			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
+			self.hazards[x, y] = Hazards.load(obj.type, Rect((x, y), (width, height)))
+
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
@@ -98,6 +104,15 @@ class Stage:
 
 		print("Zone offset %d,%d"%(self.scroll_offset_x, self.scroll_offset_y))
 
+	def get_platforms(self):
+		return self.platforms.values()
+
+	def get_ladders(self):
+		return self.ladders.values()
+
+	def get_hazards(self):
+		return self.hazards.values()
+
 	def get_music_track(self):
 		return self.music_track
 
@@ -118,6 +133,8 @@ class Stage:
 	def in_zone(self, player):
 		prect = player.get_rect()
 		colliding_zones = list(filter((lambda zone: prect.colliderect(zone.rect)), self.zones.values()))
+
+		# print('In Zones %d'%len(colliding_zones))
 
 		if len(colliding_zones) == 0:
 			return None

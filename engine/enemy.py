@@ -1,4 +1,3 @@
-import copy
 from pygame import sprite, math
 from pygame.sprite import Rect
 from .constants import *

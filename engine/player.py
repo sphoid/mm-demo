@@ -315,11 +315,13 @@ class Player(sprite.Sprite):
 
 	def grab_ladder(self, ladder, going_down=False):
 		self.velocity.x = 0
+		self.velocity.y = 0
 		self.position.x = ladder.get_left() + int(ladder.get_width() / 2)
 		if going_down:
 			self.rect.width = 16
 			self.position.y += int(self.rect.height / 2)
 		self.climbing = True
+		self.falling = False
 		self.reset_animation = True
 
 	def release_ladder(self):

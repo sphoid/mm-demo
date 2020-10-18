@@ -8,6 +8,7 @@ from .sound import *
 from .object import *
 from .tile import *
 from .enemy import Enemies
+from .hazards import Hazards
 from .stage import *
 from .weapon import *
 from .hud import *
