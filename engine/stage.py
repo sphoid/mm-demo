@@ -19,6 +19,7 @@ class Stage:
 		self.player = None
 		self.map = None
 		self.zone = None
+		self.zoned = False
 		self.tiles = {}
 		self.zones = {}
 		self.ladders = {}
@@ -78,17 +79,16 @@ class Stage:
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
-			self.enemies.load(obj.name, obj.type, x, y, obj.properties)
+			print(obj.properties)
+			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
 			print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y, width, height))
 
 		for obj in self.map.get_layer_by_name('player'):
 			x, y, width, height, type = int(obj.x), int(obj.y), int(obj.width), int(obj.height), obj.type
 			if obj.type == 'start':
 				self.warp_start_position = Vector2(x, y)
-				# print('Warp start=%d,%d'%(self.warp_start_position.x, self.warp_start_position.y))
 			elif obj.type == 'land':
 				self.warp_land_position = Vector2(x, y)
-				# print('Warp land=%d,%d'%(self.warp_land_position.x, self.warp_land_position.y))
 
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
@@ -130,6 +130,7 @@ class Stage:
 
 	def set_zone(self, zone_name):
 		self.zone = self.zones[zone_name]
+		self.zoned = True
 
 	def in_zone(self, player):
 		prect = player.get_rect()
@@ -205,9 +206,8 @@ class Stage:
 		return self.enemy_sprite_group()
 
 	def update_enemies(self, player):
-		view = self.view
-		offset = view.get_offset()
-		spawned_enemies = self.enemies.spawn_nearby(player)
+		spawned_enemies = self.enemies.spawn_nearby(player, self.zone, self.zoned)
+		self.zoned = False
 
 		for enemy in spawned_enemies:
 			self.enemy_sprite_group.add(enemy)

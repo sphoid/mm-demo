@@ -18,24 +18,33 @@ class Enemies:
 		return 'enemies.png'
 
 	def load(self, name, type, *start_position, **attributes):
+		print(attributes)
 		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
 
-	def spawn_nearby(self, player):
+	def spawn_nearby(self, player, zone, zoned):
 		area, stage = self.area, self.stage
 		view = stage.get_view()
-		vw = view.get_width()
+		vw, vh = view.get_width(), view.get_height()
 		offset = view.get_offset()
 
 		# TODO: handle zoning
 
+		zenemies = list(filter((lambda name: self.enemies[name]['attributes']['zone'] == zone.get_name()), self.enemies.keys()))
+
 		enemies = list()
-		for name, enemy in self.enemies.items():
+		for name in zenemies:
+			enemy = self.enemies[name]
 			start_position = enemy['start_position']
 			count = enemy['count']
 			if count == 0:
-				if abs(start_position[0] - (offset.x + vw)) < self.spawn_range and start_position[0] > (offset.x + vw):
-					enemy['count'] += 1
-					enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], enemy['attributes']))
+				if zoned:
+					if start_position[0] > offset.x and start_position[0] < offset.x + vw and start_position[1] > offset.y and start_position[1] < offset.y + vh:
+						enemy['count'] += 1
+						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], enemy['attributes']))
+				else:
+					if abs(start_position[0] - (offset.x + vw)) < self.spawn_range and start_position[0] > (offset.x + vw):
+						enemy['count'] += 1
+						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], enemy['attributes']))
 
 		return enemies
 
@@ -109,6 +118,11 @@ class Enemy(sprite.Sprite):
 		else:
 			self.damage = self.get_default_damage()
 
+		if 'zone' in attributes:
+			self.zone = attributes['zone']
+		else:
+			self.zone = None
+
 		self.start_position = Vector2(position[0], position[1])
 		self.position = self.start_position
 		self.stage = stage
@@ -144,6 +158,9 @@ class Enemy(sprite.Sprite):
 
 	def get_name(self):
 		return self.name
+
+	def get_zone(self):
+		return self.zone
 
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
