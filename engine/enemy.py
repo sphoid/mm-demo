@@ -18,7 +18,6 @@ class Enemies:
 		return 'enemies.png'
 
 	def load(self, name, type, *start_position, **attributes):
-		print(attributes)
 		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
 
 	def spawn_nearby(self, player, zone, zoned):
@@ -40,15 +39,15 @@ class Enemies:
 				if zoned:
 					if start_position[0] > offset.x and start_position[0] < offset.x + vw and start_position[1] > offset.y and start_position[1] < offset.y + vh:
 						enemy['count'] += 1
-						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], enemy['attributes']))
+						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], **enemy['attributes']))
 				else:
 					if abs(start_position[0] - (offset.x + vw)) < self.spawn_range and start_position[0] > (offset.x + vw):
 						enemy['count'] += 1
-						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], enemy['attributes']))
+						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], **enemy['attributes']))
 
 		return enemies
 
-	def spawn(self, type, name, player, *start_position):
+	def spawn(self, type, name, player, *start_position, **attributes):
 		if type == 'bhc':
 			enemy_class = BlueHeliChomper
 		elif type == 'ghc':
@@ -60,7 +59,7 @@ class Enemies:
 		else:
 			SystemExit('Invalid enemy type %s'%type)
 
-		enemy = enemy_class(name, self.spritesheet, self.stage, self.sounds, self, player, start_position[0], start_position[1])
+		enemy = enemy_class(name, self.spritesheet, self.stage, self.sounds, self, player, start_position[0], start_position[1], **attributes)
 
 		# print('spawn: %s pos=%d,%d'%(enemy.name, start_position[0], start_position[1]))
 
@@ -74,6 +73,7 @@ class Enemies:
 
 class Enemy(sprite.Sprite):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+		# print(attributes)
 		super().__init__()
 		self.name = name
 		self.spritesheet = spritesheet
@@ -297,7 +297,7 @@ class Enemy(sprite.Sprite):
 class HeliChomper(Enemy):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], attributes)
+		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
 		self.swooping = False
 		self.swoop_direction = 0
 		self.swoop_target_y = 0
@@ -326,7 +326,6 @@ class HeliChomper(Enemy):
 		pass
 
 	def swoop_up(self, y):
-		# print('HC: Swoop up')
 		self.swooping = True
 		self.swoop_cooling_down = False
 		self.move_up()
@@ -335,7 +334,6 @@ class HeliChomper(Enemy):
 		self.swoop_target_y = y
 
 	def swoop_down(self, y):
-		# print('HC: Swoop down')
 		self.swooping = True
 		self.swoop_cooling_down = False
 		self.move_down()
@@ -356,7 +354,6 @@ class HeliChomper(Enemy):
 			self.velocity.y = +self.move_speed_y
 
 	def stop_swooping(self):
-		# print('HC: Stop swooping')
 		self.velocity.y = 0
 		self.swooping = False
 		self.swoop_cooling_down = True
@@ -381,13 +378,11 @@ class HeliChomper(Enemy):
 			y = self.position.y
 			if self.swoop_direction == 1:
 				if v.y > 0 and y >= self.swoop_target_y:
-					# print('HC: Reverse up')
 					self.move_up()
 				elif v.y < 0 and y <= self.swoop_original_y:
 					self.stop_swooping()
 			else:
 				if v.y < 0 and y <= self.swoop_target_y:
-					# print('HC: Reverse down')
 					self.move_down()
 				elif v.y > 0 and y >= self.swoop_original_y:
 					self.stop_swooping()
@@ -466,7 +461,6 @@ class WallShooterPellet(sprite.Sprite):
 		self.image = image
 		self.rect = image.get_rect()
 		self.position = Vector2(position[0], position[1])
-		# self.direction = direction
 		self.target = target
 		self.speed = 1
 		self.damage = 2
@@ -474,7 +468,6 @@ class WallShooterPellet(sprite.Sprite):
 		self.velocity = self.calculate_velocity()
 
 	def calculate_velocity(self):
-		# speed = 1
 		dx = self.position.x - self.target[0]
 		dy = self.position.y - self.target[1]
 
@@ -528,7 +521,7 @@ class WallShooterPellet(sprite.Sprite):
 
 class WallShooter(Enemy):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], attributes)
+		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
 		self.active = False
 		self.deactivating = False
 		self.shooting = False
@@ -588,7 +581,6 @@ class WallShooter(Enemy):
 		return [target1, target2, target3, target4]
 
 	def shoot(self):
-		# print('WS: Shoot')
 		target = self.targets.pop()
 		view = self.stage.get_view()
 		p = self.position
@@ -599,7 +591,6 @@ class WallShooter(Enemy):
 		self.shots_fired += 1
 
 	def stop_shooting(self):
-		# print('WS: Stop Shooting')
 		self.shooting = False
 
 	def activate(self):
@@ -672,28 +663,28 @@ class BlueWallShooter(WallShooter):
 
 		self.animations = dict(
 			shoot_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), -1), callback=self.set_closed),
-				dict(duration=0.1, image=image_at(Rect((372, 291), (16, 16)), -1), callback=self.set_open),
-				dict(duration=0.1, image=image_at(Rect((332, 291), (16, 16)), -1)),
-				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), -1), callback=self.start_shooting),
-				dict(duration=0.1, image=image_at(Rect((332, 291), (16, 16)), -1)),
-				dict(duration=0.1, image=image_at(Rect((372, 291), (16, 16)), -1)),
-				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), -1), callback=self.close_and_deactivate),
+				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1), callback=self.set_closed),
+				dict(duration=0.1, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1), callback=self.set_open),
+				dict(duration=0.1, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1)),
+				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), colorkey=-1), callback=self.start_shooting),
+				dict(duration=0.1, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1), callback=self.close_and_deactivate),
 			]),
 			shoot_right=Animation([
-				dict(duration=1.5, image=image_at(Rect((412, 291), (16, 16)), -1, flip=True), callback=self.set_closed),
-				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), -1, flip=True), callback=self.set_open),
-				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), -1, flip=True)),
-				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), -1, flip=True), callback=self.start_shooting),
-				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), -1, flip=True)),
-				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), -1, flip=True)),
-				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), -1, flip=True), callback=self.close_and_deactivate),
+				dict(duration=1.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip=True), callback=self.set_closed),
+				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip=True), callback=self.set_open),
+				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), colorkey=-1, flip=True), callback=self.start_shooting),
+				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip=True), callback=self.close_and_deactivate),
 			]),
 			still_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), -1)),
+				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1)),
 			]),
 			still_right=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), -1, flip=True)),
+				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip=True)),
 			])
 		)
 
@@ -710,33 +701,33 @@ class RedWallShooter(WallShooter):
 		# TODO: Fix animation glitch
 		self.animations = dict(
 			shoot_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), -1), callback=self.set_closed),
-				dict(duration=0.1, image=image_at(Rect((372, 251), (16, 16)), -1), callback=self.set_open),
-				dict(duration=0.1, image=image_at(Rect((332, 251), (16, 16)), -1)),
-				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), -1), callback=self.start_shooting),
-				dict(duration=0.1, image=image_at(Rect((332	,251), (16, 16)), -1)),
-				dict(duration=0.1, image=image_at(Rect((372, 251), (16, 16)), -1)),
-				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), -1), callback=self.close_and_deactivate),
+				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1), callback=self.set_closed),
+				dict(duration=0.1, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1), callback=self.set_open),
+				dict(duration=0.1, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1)),
+				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), colorkey=-1), callback=self.start_shooting),
+				dict(duration=0.1, image=image_at(Rect((332	,251), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1), callback=self.close_and_deactivate),
 			]),
 			shoot_right=Animation([
-				dict(duration=1.5, image=image_at(Rect((412, 251), (16, 16)), -1, flip=True), callback=self.set_closed),
-				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), -1, flip=True), callback=self.set_open),
-				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), -1, flip=True)),
-				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), -1, flip=True), callback=self.start_shooting),
-				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), -1, flip=True)),
-				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), -1, flip=True)),
-				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), -1, flip=True), callback=self.close_and_deactivate),
+				dict(duration=1.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip=True), callback=self.set_closed),
+				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip=True), callback=self.set_open),
+				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), colorkey=-1, flip=True), callback=self.start_shooting),
+				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip=True), callback=self.close_and_deactivate),
 			]),
 			still_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), -1)),
+				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1)),
 			]),
 			still_right=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), -1, flip=True)),
+				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip=True)),
 			])
 		)
 
 		self.pellet_image = image_at(Rect((281, 256), (6, 6)), -1)
 
-		start_frame = self.animations['still_right'].current() if self.direction == 1 else  self.animations['still_left'].current()
+		start_frame = self.animations['still_right'].current() if self.direction == 1 else self.animations['still_left'].current()
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()

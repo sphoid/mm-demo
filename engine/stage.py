@@ -79,7 +79,6 @@ class Stage:
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
-			print(obj.properties)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
 			print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y, width, height))
 
@@ -101,9 +100,10 @@ class Stage:
 		self.load_map()
 
 		self.zone = self.get_starting_zone()
+		self.zoned = True
 		self.scroll_offset_y = self.zone.get_top()
 
-		print("Zone offset %d,%d"%(self.scroll_offset_x, self.scroll_offset_y))
+		# print("Zone offset %d,%d"%(self.scroll_offset_x, self.scroll_offset_y))
 
 	def get_platforms(self):
 		return self.platforms.values()
@@ -135,8 +135,6 @@ class Stage:
 	def in_zone(self, player):
 		prect = player.get_rect()
 		colliding_zones = list(filter((lambda zone: prect.colliderect(zone.rect)), self.zones.values()))
-
-		# print('In Zones %d'%len(colliding_zones))
 
 		if len(colliding_zones) == 0:
 			return None

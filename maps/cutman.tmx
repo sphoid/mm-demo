@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="12" nextobjectid="212">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="12" nextobjectid="218">
  <properties>
   <property name="Music Track" value="cutman-stage"/>
   <property name="Start Zone" value="z1"/>
@@ -377,6 +377,42 @@
    <properties>
     <property name="direction" type="int" value="0"/>
     <property name="zone" value="z2"/>
+   </properties>
+  </object>
+  <object id="212" name="ws6" type="rws" x="816" y="1744" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z3"/>
+   </properties>
+  </object>
+  <object id="213" name="ws7" type="rws" x="864" y="1680" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z3"/>
+   </properties>
+  </object>
+  <object id="214" name="ws8" type="rws" x="928" y="1616" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z3"/>
+   </properties>
+  </object>
+  <object id="215" name="ws9" type="rws" x="864" y="1520" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z4"/>
+   </properties>
+  </object>
+  <object id="216" name="ws10" type="rws" x="928" y="1392" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z4"/>
+   </properties>
+  </object>
+  <object id="217" name="ws11" type="rws" x="896" y="1344" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z4"/>
    </properties>
   </object>
  </objectgroup>
