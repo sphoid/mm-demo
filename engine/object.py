@@ -1,5 +1,5 @@
 from pygame.sprite import Rect
-from pygame import math
+from pygame.math import Vector2
 
 class GameObject:
 	def __init__(self, rect, name=None):
@@ -23,7 +23,7 @@ class GameObject:
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
 
 	def get_position(self):
-		return math.Vector2(self.get_left(), self.get_top())
+		return Vector2(self.get_left(), self.get_top())
 
 	def get_bottom(self):
 		return self.rect.bottom

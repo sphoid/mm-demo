@@ -1,5 +1,7 @@
-from pygame import sprite, math
+import math
+from pygame import sprite
 from pygame.sprite import Rect
+from pygame.math import Vector2
 from .constants import *
 from .animation import *
 
@@ -18,12 +20,12 @@ class Enemies:
 	def load(self, name, type, *start_position, **attributes):
 		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
 
-	def spawn_nearby(self, x, player):
+	def spawn_nearby(self, player):
 		area, stage = self.area, self.stage
 		view = stage.get_view()
 		vw = view.get_width()
 		offset = view.get_offset()
-		
+
 		# TODO: handle zoning
 
 		enemies = list()
@@ -91,11 +93,11 @@ class Enemy(sprite.Sprite):
 
 		if moving:
 			if self.direction == 1:
-				self.velocity = math.Vector2(self.move_speed_x, 0)
+				self.velocity = Vector2(self.move_speed_x, 0)
 			elif self.direction == 0:
-				self.velocity = math.Vector2(-self.move_speed_x, 0)
+				self.velocity = Vector2(-self.move_speed_x, 0)
 		else:
-			self.velocity = math.Vector2(0, 0)
+			self.velocity = Vector2(0, 0)
 
 		if 'hit_points' in attributes:
 			self.hit_points = attributes['hit_points']
@@ -107,7 +109,7 @@ class Enemy(sprite.Sprite):
 		else:
 			self.damage = self.get_default_damage()
 
-		self.start_position = math.Vector2(position[0], position[1])
+		self.start_position = Vector2(position[0], position[1])
 		self.position = self.start_position
 		self.stage = stage
 		self.sounds = sounds
@@ -442,15 +444,29 @@ class GreenHeliChomper(HeliChomper):
 
 
 class WallShooterPellet(sprite.Sprite):
-	def __init__(self, image, view, direction, *position):
+	def __init__(self, image, view, target, *position):
 		super().__init__()
 		self.image = image
 		self.rect = image.get_rect()
-		self.position = math.Vector2(position[0], position[1])
-		self.direction = direction
+		self.position = Vector2(position[0], position[1])
+		# self.direction = direction
+		self.target = target
 		self.speed = 1
 		self.damage = 2
 		self.view = view
+		self.velocity = self.calculate_velocity()
+
+	def calculate_velocity(self):
+		# speed = 1
+		dx = self.position.x - self.target[0]
+		dy = self.position.y - self.target[1]
+
+		dz = math.sqrt(dx**2 + dy**2)
+
+		speedx = dx/dz * self.speed
+		speedy = dy/dz * self.speed
+
+		return Vector2(speedx, speedy)
 
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
@@ -483,10 +499,9 @@ class WallShooterPellet(sprite.Sprite):
 		return self.damage
 
 	def update_position(self):
-		if self.direction == 1:
-			self.position.x += self.speed
-		else:
-			self.position.x -= self.speed
+		v = self.velocity
+		self.position.x += v.x
+		self.position.y += v.y
 
 	def update(self, delta):
 		self.update_position()
@@ -505,6 +520,7 @@ class WallShooter(Enemy):
 		self.shoot_time = 0
 		self.shot_frequency = 0.75
 		self.max_shots = 4
+		self.targets = None
 
 		self.load_sprites()
 
@@ -530,16 +546,36 @@ class WallShooter(Enemy):
 			self.set_inactive()
 
 	def start_shooting(self):
+		self.targets = self.calculate_targets()
 		self.shooting = True
 		self.shoot_time = 0
 		self.shots_fired = 0
 
+	def calculate_targets(self):
+		p = self.position
+		view = self.stage.get_view()
+		vw, vh = view.get_width(), view.get_height()
+		offset = view.get_offset()
+
+		if self.direction:
+			target1 = p.x - (vw / 4), offset.y
+			target2 = offset.x, p.y - (vh / 4)
+			target3 = offset.x, p.y + (vh / 4)
+			target4 = p.x - (vw / 4), offset.y + vh
+		else:
+			target1 = p.x + (vw / 4), offset.y
+			target2 = offset.x + vw, p.y - (vh / 4)
+			target3 = offset.x + vw, p.y + (vh / 4)
+			target4 = p.x + (vw / 4), offset.y + vh
+
+		return [target1, target2, target3, target4]
+
 	def shoot(self):
 		# print('WS: Shoot')
+		target = self.targets.pop()
 		view = self.stage.get_view()
-		start_pos_x = self.get_right() if self.direction else self.get_left()
-		start_pos_y = self.get_top() + self.rect.height
-		pellet = WallShooterPellet(self.pellet_image, view, self.direction, start_pos_x, start_pos_y)
+		p = self.position
+		pellet = WallShooterPellet(self.pellet_image, view, target, p.x, p.y + (self.get_height() / 2))
 		self.pew_sprite_group.add(pellet)
 		self.sounds.play_sound('eshoot')
 		self.shoot_time = 0

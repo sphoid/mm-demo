@@ -1,11 +1,12 @@
-from pygame import math, sprite
+from pygame import sprite
+from pygame.math import Vector2
 
 class Tile(sprite.Sprite):
 	def __init__(self, image, stage, *grid_position):
 		super().__init__()
 		self.image = image
 		self.rect = image.get_rect()
-		self.position = math.Vector2(grid_position[0], grid_position[1])
+		self.position = Vector2(grid_position[0], grid_position[1])
 		self.stage = stage
 
 	def get_width(self):

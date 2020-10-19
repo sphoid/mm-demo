@@ -1,11 +1,11 @@
-from pygame import math
+from pygame.math import Vector2
 
 class View:
 	def __init__(self, *size):
 		self.stage = None
 		self.player = None
 		self.size = size
-		self.offset = math.Vector2(0, 0)
+		self.offset = Vector2(0, 0)
 
 	def get_size(self):
 		return self.size

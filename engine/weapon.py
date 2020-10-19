@@ -1,5 +1,6 @@
-from pygame import sprite, math
+from pygame import sprite
 from pygame.sprite import Rect
+from pygame.math import Vector2
 from .constants import *
 
 class BusterPellet(sprite.Sprite):
@@ -7,7 +8,7 @@ class BusterPellet(sprite.Sprite):
 		super().__init__()
 		self.image = image
 		self.rect = image.get_rect()
-		self.position = math.Vector2(position[0], position[1])
+		self.position = Vector2(position[0], position[1])
 		self.direction = direction
 		self.speed = 10
 		self.damage = 1

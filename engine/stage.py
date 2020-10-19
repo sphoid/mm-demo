@@ -1,5 +1,6 @@
 from pygame import sprite, draw
 from pygame.sprite import Rect
+from pygame.math import Vector2
 from functools import reduce
 from .constants import *
 from .util import *
@@ -83,10 +84,10 @@ class Stage:
 		for obj in self.map.get_layer_by_name('player'):
 			x, y, width, height, type = int(obj.x), int(obj.y), int(obj.width), int(obj.height), obj.type
 			if obj.type == 'start':
-				self.warp_start_position = math.Vector2(x, y)
+				self.warp_start_position = Vector2(x, y)
 				# print('Warp start=%d,%d'%(self.warp_start_position.x, self.warp_start_position.y))
 			elif obj.type == 'land':
-				self.warp_land_position = math.Vector2(x, y)
+				self.warp_land_position = Vector2(x, y)
 				# print('Warp land=%d,%d'%(self.warp_land_position.x, self.warp_land_position.y))
 
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
@@ -206,7 +207,7 @@ class Stage:
 	def update_enemies(self, player):
 		view = self.view
 		offset = view.get_offset()
-		spawned_enemies = self.enemies.spawn_nearby(offset.x + view.get_width(), player)
+		spawned_enemies = self.enemies.spawn_nearby(player)
 
 		for enemy in spawned_enemies:
 			self.enemy_sprite_group.add(enemy)

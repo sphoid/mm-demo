@@ -1,5 +1,6 @@
-from pygame import sprite, math
+from pygame import sprite
 from pygame.sprite import Rect
+from pygame.math import Vector2
 from .constants import *
 from .animation import *
 from .weapon import *
@@ -22,8 +23,8 @@ class Player(sprite.Sprite):
 		self.max_height = 48
 		self.max_width = 48
 
-		self.velocity = math.Vector2(0, 0)
-		self.position = math.Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
+		self.velocity = Vector2(0, 0)
+		self.position = Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
 		self.view = None
 
 		self.current_time = 0

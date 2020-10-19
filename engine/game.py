@@ -1,5 +1,6 @@
 import pygame
-from pygame import sprite, transform, display, draw, math
+from pygame import sprite, transform, display, draw
+from pygame.math import Vector2
 from .constants import *
 from .sprite import *
 from .player import *
@@ -302,23 +303,23 @@ class Game:
 
 			if self.transition_axis == 'y':
 				if to_p.y < from_p.y and offset.y > to_p.y:
-					view.set_offset(math.Vector2(offset.x, offset.y - self.transition_speed))
+					view.set_offset(Vector2(offset.x, offset.y - self.transition_speed))
 				elif to_p.y > from_p.y and offset.y < to_p.y:
-					view.set_offset(math.Vector2(offset.x, offset.y + self.transition_speed))
+					view.set_offset(Vector2(offset.x, offset.y + self.transition_speed))
 				else:
 					print('arrived at zone %s'% s_to.get_name())
 					print('setting view offset %d,%d'%(offset.x, to_p.y))
-					view.set_offset(math.Vector2(offset.x, to_p.y))
+					view.set_offset(Vector2(offset.x, to_p.y))
 					self.stop_transition_zones()
 			elif self.transition_axis == 'x':
 				if to_p.x > from_p.x and offset.x < to_p.x:
-					view.set_offset(math.Vector2(offset.x + self.transition_speed, offset.y))
+					view.set_offset(Vector2(offset.x + self.transition_speed, offset.y))
 				elif to_p.x < from_p.x and offset.x > to_p.x:
-					view.set_offset(math.Vector2(offset.x - self.transition_speed, offset.y))
+					view.set_offset(Vector2(offset.x - self.transition_speed, offset.y))
 				else:
 					print('arrived at zone %s'% s_to.get_name())
 					print('setting view offset %d,%d'%(to_p.x, offset.y))
-					view.set_offset(math.Vector2(to_p.x, offset.y))
+					view.set_offset(Vector2(to_p.x, offset.y))
 					self.stop_transition_zones()
 		else:
 			stage, player = self.stage, self.player
@@ -345,7 +346,7 @@ class Game:
 				# print('not scrolling')
 				offset_x = zpos.x
 
-			self.view.set_offset(math.Vector2(offset_x, view.get_offset().y))
+			self.view.set_offset(Vector2(offset_x, view.get_offset().y))
 
 	def update(self, delta):
 		player = self.player

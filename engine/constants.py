@@ -1,3 +1,15 @@
+from enum import Enum
+
+class Direction(Enum):
+	N='N'
+	NW='NW'
+	W='W'
+	SW='SW'
+	S='S'
+	SE='SE'
+	E='E'
+	NE='NE'
+
 DEBUG = 0
 INFO = 2
 WARN = 4
