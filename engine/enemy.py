@@ -1,5 +1,5 @@
 import math
-from pygame import sprite
+from pygame import sprite, time
 from pygame.sprite import Rect
 from pygame.math import Vector2
 from .constants import *
@@ -56,6 +56,8 @@ class Enemies:
 			enemy_class = BlueWallShooter
 		elif type == 'rws':
 			enemy_class = RedWallShooter
+		elif type == 'snapper':
+			enemy_class = Snapper
 		else:
 			SystemExit('Invalid enemy type %s'%type)
 
@@ -79,6 +81,7 @@ class Enemy(sprite.Sprite):
 		self.spritesheet = spritesheet
 		self.enemies = enemies
 		self.player = player
+		self.view = player.get_view()
 
 		if 'direction' in attributes:
 			self.direction = attributes['direction']
@@ -124,12 +127,10 @@ class Enemy(sprite.Sprite):
 			self.zone = None
 
 		self.start_position = Vector2(position[0], position[1])
-		self.position = self.start_position
+		self.position = Vector2(self.start_position[0], self.start_position[1])
 		self.stage = stage
 		self.sounds = sounds
 		self.pew_sprite_group = sprite.Group()
-
-		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 
 		self.reset_animation = False
 		self.current_time = 0
@@ -178,8 +179,7 @@ class Enemy(sprite.Sprite):
 		return self.position
 
 	def set_position(self, *position):
-		self.position.x = int(position[0])
-		self.position.y = int(position[1])
+		self.position = int(position[0]), int(position[1])
 
 	def get_bottom(self):
 		return int(self.position.y + int(self.rect.height / 2))
@@ -246,10 +246,10 @@ class Enemy(sprite.Sprite):
 	def collides_with(self, rect):
 		return self.get_rect().colliderect(rect)
 
-	def react(self):
+	def react(self, delta):
 		pass
 
-	def update_position(self):
+	def update_position(self, delta):
 		v = self.get_velocity()
 		self.position.x += v.x
 		self.position.y += v.y
@@ -262,7 +262,7 @@ class Enemy(sprite.Sprite):
 		for pew in self.pew_sprite_group:
 			pew.update_position()
 			p = pew.get_position()
-			view = self.stage.get_view()
+			view = self.view
 			offset = view.get_offset()
 
 			if p.x - offset.x > view.get_width() or p.x < offset.x:
@@ -277,16 +277,12 @@ class Enemy(sprite.Sprite):
 				pew.kill()
 
 	def check_off_screen(self):
-		p = self.position
-		view = self.stage.get_view()
-		vw = view.get_width()
-		offset = view.get_offset()
-		if p.x < offset.x - int(vw / 2) or p.x > (offset.x + vw + int(vw / 2)):
+		if not self.view.in_view(self.get_rect()):
 			self.enemies.kill(self)
 
 	def update(self, delta):
-		self.react()
-		self.update_position()
+		self.react(delta)
+		self.update_position(delta)
 		self.update_status()
 		self.update_pew_positions()
 		self.check_hits()
@@ -359,7 +355,7 @@ class HeliChomper(Enemy):
 		self.swoop_cooling_down = True
 		self.swoop_cooldown_time = 0
 
-	def react(self):
+	def react(self, delta):
 		player = self.player
 		v = self.get_velocity()
 		pv = player.get_velocity()
@@ -412,9 +408,6 @@ class HeliChomper(Enemy):
 			view = self.stage.get_view()
 			offset = view.get_offset()
 			self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
-
-			if self.rect.top > self.area.height:
-				self.enemies.kill(self)
 
 class BlueHeliChomper(HeliChomper):
 	def load_sprites(self):
@@ -563,7 +556,7 @@ class WallShooter(Enemy):
 
 	def calculate_targets(self):
 		p = self.position
-		view = self.stage.get_view()
+		view = self.view
 		vw, vh = view.get_width(), view.get_height()
 		offset = view.get_offset()
 
@@ -582,9 +575,8 @@ class WallShooter(Enemy):
 
 	def shoot(self):
 		target = self.targets.pop()
-		view = self.stage.get_view()
 		p = self.position
-		pellet = WallShooterPellet(self.pellet_image, view, target, p.x, p.y + (self.get_height() / 2))
+		pellet = WallShooterPellet(self.pellet_image, self.view, target, p.x, p.y + (self.get_height() / 2))
 		self.pew_sprite_group.add(pellet)
 		self.sounds.play_sound('eshoot')
 		self.shoot_time = 0
@@ -605,7 +597,8 @@ class WallShooter(Enemy):
 	def deactivate(self):
 		self.deactivating = True
 
-	def react(self):
+	def react(self, delta):
+		view = self.player.get_view()
 		ppos = self.player.get_position()
 		pos = self.get_position()
 
@@ -619,6 +612,11 @@ class WallShooter(Enemy):
 			super().hit(pew)
 		else:
 			self.sounds.play_sound('dink')
+
+	def check_pew_off_screen(self):
+		for pew in self.pew_sprite_group:
+			if not self.view.in_view(pew.get_rect()):
+				pew.kill()
 
 	def update(self, delta):
 		super().update(delta)
@@ -653,7 +651,7 @@ class WallShooter(Enemy):
 				self.current_time = 0
 
 			p = self.position
-			view = self.stage.get_view()
+			view = self.view
 			offset = view.get_offset()
 			self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
 
@@ -731,3 +729,149 @@ class RedWallShooter(WallShooter):
 		start_frame = self.animations['still_right'].current() if self.direction == 1 else self.animations['still_left'].current()
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
+
+class Snapper(Enemy):
+	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
+		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+
+		if self.direction:
+			self.angle = 45
+		else:
+			self.angle = -45
+
+		self.jumping = False
+		self.move_time = 0
+
+		self.load_sprites()
+
+	def get_default_move_x_speed(self):
+		return 5
+
+	def get_default_move_y_speed(self):
+		return 5
+
+	def get_default_hit_points(self):
+		return 3
+
+	def get_default_damage(self):
+		return 8
+
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			move_left=Animation([
+				dict(duration=0.1, image=image_at(Rect((216, 9), (16, 20)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((176, 12), (16, 20)), colorkey=-1)),
+			]),
+			move_right=Animation([
+				dict(duration=0.1, image=image_at(Rect((216, 9), (16, 20)), colorkey=-1, flip=True)),
+				dict(duration=0.1, image=image_at(Rect((176, 12), (16, 20)), colorkey=-1, flip=True)),
+			])
+		)
+
+		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+	def calculate_jump_velocity(self, target, time):
+		pos = self.position
+		vx = (target.x - pos.x) / time
+		vy = target.y + 0.5 * GRAVITY * time * time - pos.y / time
+
+		return Vector2(vx, vy)
+
+	def jump(self, angle, delta):
+		print('JUMP angle=%d delta=%f'%(angle, delta))
+		self.jumping = True
+		self.angle = angle
+		self.jump_start_time = delta
+		self.jump_time = 0
+		self.jump_velocity = 20
+		# self.jump_velocity = self.calculate_jump_velocity()
+
+	def react(self, delta):
+		if not self.jumping:
+			player = self.player
+			p = player.get_position()
+			x, y = self.position.x, self.position.y
+
+			if x - p.x < 100:
+				self.jump(-45, delta)
+			elif p.x - x < 100:
+				self.jump(45, delta)
+
+	def update_position(self, delta):
+		if self.jumping:
+			self.jump_time += delta
+			# gravity = -9.8
+			time_diff = (self.jump_time - self.jump_start_time) * 7
+			print('time_diff=%f'%time_diff)
+			if time_diff > 0:
+				half_gravity_time_squared = GRAVITY * (time_diff * time_diff) * 0.5
+				displacement_x = self.jump_velocity * math.sin(self.angle) * time_diff
+				displacement_y = self.jump_velocity * math.cos(self.angle) * time_diff - half_gravity_time_squared
+
+				start_x, start_y = self.start_position.x, self.start_position.y
+
+				self.position.x = start_x + int(displacement_x)
+				self.position.y = start_y - int(displacement_y)
+				# print('new pos=%d,%d'%(self.position.x, self.position.y))
+
+
+	# import math
+	# from processing import *
+
+	# X = 30
+	# Y = 30
+	# gravity=9.81
+	# angle=70
+	# velocity=80
+	# vx=velocity * math.cos(math.radians(angle))
+	# vy=velocity * math.sin(math.radians(angle))
+	# t=0
+
+	# def setup():
+	# 	strokeWeight(10)
+	# 	frameRate(100)
+	# 	size(400,400)
+
+	# def throwBall():
+	# 	global X, Y, radius, gravity, t,vx,vy
+	# 	background(100)
+	# 	fill(0,121,184)
+	# 	stroke(255)
+	# 	fc = environment.frameCount
+	# 	t +=0.02
+	# 	X = vx*t
+	# 	Y = 400 -(vy*t - (gravity/2)*t*t)
+
+	# 	ellipse(X,Y,30,30)
+
+
+	# draw = throwBall
+	# run()
+
+	def update(self, delta):
+		super().update(delta)
+
+		if self.dead:
+			self.enemies.kill(self)
+		else:
+			animation = self.animations['move_right'] if self.direction == 1 else self.animations['move_left']
+
+			if self.reset_animation:
+				animation.reset()
+				self.reset_animation = False
+
+			self.current_time += delta
+			if self.current_time >= animation.next_time:
+				prev_center = self.rect.center
+				self.image = animation.next(0)['image']
+				self.rect.width = self.image.get_rect().width
+				self.rect.center = prev_center
+				self.current_time = 0
+
+			offset = self.view.get_offset()
+			self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
