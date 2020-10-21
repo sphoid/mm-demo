@@ -27,5 +27,8 @@ class View:
 	def in_view(self, rect):
 		return rect.left > self.offset.x and rect.right < self.offset.x + self.get_width() and rect.top > self.offset.y and rect.bottom < self.offset.y + self.get_height()
 
+	def in_range(self, rect, range):
+		return abs(rect.left - (self.offset.x + self.get_width())) < range and rect.left > (self.offset.x + self.get_width())
+
 	def update(self):
 		pass

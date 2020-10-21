@@ -418,6 +418,8 @@
   <object id="218" name="snap1" type="snapper" x="896" y="1216" width="16" height="16">
    <properties>
     <property name="direction" value="0"/>
+    <property name="spawn_in_view" type="bool" value="true"/>
+    <property name="spawn_range" type="int" value="75"/>
     <property name="zone" value="z5"/>
    </properties>
   </object>

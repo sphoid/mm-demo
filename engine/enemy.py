@@ -35,15 +35,19 @@ class Enemies:
 			enemy = self.enemies[name]
 			start_position = enemy['start_position']
 			count = enemy['count']
+			spawn_in_view = enemy['attributes']['spawn_in_view'] if 'spawn_in_view' in enemy['attributes'] else False
 			if count == 0:
-				if zoned:
-					if start_position[0] > offset.x and start_position[0] < offset.x + vw and start_position[1] > offset.y and start_position[1] < offset.y + vh:
-						enemy['count'] += 1
-						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], **enemy['attributes']))
-				else:
-					if abs(start_position[0] - (offset.x + vw)) < self.spawn_range and start_position[0] > (offset.x + vw):
-						enemy['count'] += 1
-						enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], **enemy['attributes']))
+				spawn = False
+				if zoned or spawn_in_view:
+					spawn_range = enemy['attributes']['spawn_range'] if 'spawn_range' in enemy['attributes'] else -1
+					if (spawn_range > -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16))) and abs(start_position[0] - player.get_position().x) < self.spawn_range) or (spawn_range == -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16)))):
+						spawn = True
+				elif view.in_range(Rect((start_position[0], start_position[1]), (16, 16)), self.spawn_range):
+					spawn = True
+
+				if spawn:
+					enemy['count'] += 1
+					enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], **enemy['attributes']))
 
 		return enemies
 
@@ -775,21 +779,13 @@ class Snapper(Enemy):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-	def calculate_jump_velocity(self, target, time):
-		pos = self.position
-		vx = (target.x - pos.x) / time
-		vy = target.y + 0.5 * GRAVITY * time * time - pos.y / time
-
-		return Vector2(vx, vy)
-
-	def jump(self, angle, delta):
+	def jump(self, angle, target, delta):
 		print('JUMP angle=%d delta=%f'%(angle, delta))
 		self.jumping = True
 		self.angle = angle
 		self.jump_start_time = delta
 		self.jump_time = 0
-		self.jump_velocity = 20
-		# self.jump_velocity = self.calculate_jump_velocity()
+		self.jump_velocity = 15
 
 	def react(self, delta):
 		if not self.jumping:
@@ -797,10 +793,10 @@ class Snapper(Enemy):
 			p = player.get_position()
 			x, y = self.position.x, self.position.y
 
-			if x - p.x < 100:
-				self.jump(-45, delta)
-			elif p.x - x < 100:
-				self.jump(45, delta)
+			if p.x < x and x - p.x < 75:
+				self.jump(-45, p, delta)
+			elif p.x > x and p.x - x < 75:
+				self.jump(45, p, delta)
 
 	def update_position(self, delta):
 		if self.jumping:

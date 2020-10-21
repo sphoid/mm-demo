@@ -81,7 +81,7 @@
         "level-1.tmx"
     ],
     "project": "game-project.tiled-project",
-    "property.type": "string",
+    "property.type": "int",
     "recentFiles": [
         "cutman-tileset.tsx",
         "tiles-1.tsx",
