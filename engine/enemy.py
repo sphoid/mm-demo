@@ -5,81 +5,8 @@ from pygame.math import Vector2
 from .constants import *
 from .animation import *
 
-class Enemies:
-	def __init__(self, spritesheet_loader, sounds, stage):
-		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
-		self.stage = stage
-		self.sounds = sounds
-		self.spawn_range = 50
-		self.enemies = dict()
-		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
-
-	def get_spritesheet_filename(self):
-		return 'enemies.png'
-
-	def load(self, name, type, *start_position, **attributes):
-		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
-
-	def spawn_nearby(self, player, zone, zoned):
-		area, stage = self.area, self.stage
-		view = stage.get_view()
-		vw, vh = view.get_width(), view.get_height()
-		offset = view.get_offset()
-
-		# TODO: handle zoning
-
-		zenemies = list(filter((lambda name: self.enemies[name]['attributes']['zone'] == zone.get_name()), self.enemies.keys()))
-
-		enemies = list()
-		for name in zenemies:
-			enemy = self.enemies[name]
-			start_position = enemy['start_position']
-			count = enemy['count']
-			spawn_in_view = enemy['attributes']['spawn_in_view'] if 'spawn_in_view' in enemy['attributes'] else False
-			if count == 0:
-				spawn = False
-				if zoned or spawn_in_view:
-					spawn_range = enemy['attributes']['spawn_range'] if 'spawn_range' in enemy['attributes'] else -1
-					if (spawn_range > -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16))) and abs(start_position[0] - player.get_position().x) < self.spawn_range) or (spawn_range == -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16)))):
-						spawn = True
-				elif view.in_range(Rect((start_position[0], start_position[1]), (16, 16)), self.spawn_range):
-					spawn = True
-
-				if spawn:
-					enemy['count'] += 1
-					enemies.append(self.spawn(enemy['type'], name, player, start_position[0], start_position[1], **enemy['attributes']))
-
-		return enemies
-
-	def spawn(self, type, name, player, *start_position, **attributes):
-		if type == 'bhc':
-			enemy_class = BlueHeliChomper
-		elif type == 'ghc':
-			enemy_class = GreenHeliChomper
-		elif type == 'bws':
-			enemy_class = BlueWallShooter
-		elif type == 'rws':
-			enemy_class = RedWallShooter
-		elif type == 'snapper':
-			enemy_class = Snapper
-		else:
-			SystemExit('Invalid enemy type %s'%type)
-
-		enemy = enemy_class(name, self.spritesheet, self.stage, self.sounds, self, player, start_position[0], start_position[1], **attributes)
-
-		# print('spawn: %s pos=%d,%d'%(enemy.name, start_position[0], start_position[1]))
-
-		return enemy
-
-	def kill(self, enemy):
-		name = enemy.get_name()
-		self.enemies[name]['count'] -= 1
-		enemy.kill()
-		# print('KILL %s count=%d'%(name, self.enemies[name]['count']))
-
 class Enemy(sprite.Sprite):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
-		# print(attributes)
 		super().__init__()
 		self.name = name
 		self.spritesheet = spritesheet
@@ -134,12 +61,14 @@ class Enemy(sprite.Sprite):
 		self.position = Vector2(self.start_position[0], self.start_position[1])
 		self.stage = stage
 		self.sounds = sounds
-		self.pew_sprite_group = sprite.Group()
+
 
 		self.reset_animation = False
 		self.current_time = 0
 
 		self.dead = False
+
+		self.load_sprites()
 
 		print("SPAWN: %s direction=%d"%(self.name, self.direction))
 
@@ -160,6 +89,9 @@ class Enemy(sprite.Sprite):
 
 	def get_default_damage(self):
 		return 1
+
+	def load_sprites(self):
+		pass
 
 	def get_name(self):
 		return self.name
@@ -262,39 +194,90 @@ class Enemy(sprite.Sprite):
 		if self.hit_points <= 0:
 			self.die()
 
-	def update_pew_positions(self):
-		for pew in self.pew_sprite_group:
-			pew.update_position()
-			p = pew.get_position()
-			view = self.view
-			offset = view.get_offset()
 
-			if p.x - offset.x > view.get_width() or p.x < offset.x:
-				pew.kill()
-
-	def check_hits(self):
-		player = self.player
-		for pew in self.pew_sprite_group:
-			hit = pew.collides_with(player.get_rect())
-			if hit:
-				player.damage(pew.get_damage())
-				pew.kill()
 
 	def check_off_screen(self):
-		if not self.view.in_view(self.get_rect()):
-			self.enemies.kill(self)
+		pass
+		# if not self.view.in_range(self.get_rect(), self.view.get_width() * 2):
+			# print('Enemy offscreen. Killing')
+			# self.enemies.kill(self)
 
 	def update(self, delta):
 		self.react(delta)
 		self.update_position(delta)
 		self.update_status()
-		self.update_pew_positions()
-		self.check_hits()
+		# self.update_pew_positions()
+		# self.check_hits()
 		self.check_off_screen()
 
-		self.pew_sprite_group.update(delta)
+		# self.pew_sprite_group.update(delta)
 
-class HeliChomper(Enemy):
+class Pellet(sprite.Sprite):
+	def __init__(self, image, view, target, *position):
+		super().__init__()
+		self.image = image
+		self.rect = image.get_rect()
+		self.position = Vector2(position[0], position[1])
+		self.target = target
+		self.speed = 1
+		self.damage = 2
+		self.view = view
+		self.velocity = self.calculate_velocity()
+
+	def calculate_velocity(self):
+		dx = self.position.x - self.target[0]
+		dy = self.position.y - self.target[1]
+
+		dz = math.sqrt(dx**2 + dy**2)
+
+		speedx = dx/dz * self.speed
+		speedy = dy/dz * self.speed
+
+		return Vector2(speedx, speedy)
+
+	def get_rect(self):
+		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
+
+	def get_width(self):
+		return self.rect.width
+
+	def get_height(self):
+		return self.rect.height
+
+	def get_position(self):
+		return self.position
+
+	def get_bottom(self):
+		return int(self.position.y + int(self.rect.height / 2))
+
+	def get_top(self):
+		return int(self.position.y - int(self.rect.height / 2))
+
+	def get_left(self):
+		return int(self.position.x - int(self.rect.width / 2))
+
+	def get_right(self):
+		return int(self.position.x + int(self.rect.width / 2))
+
+	def collides_with(self, rect):
+		return self.get_rect().colliderect(rect)
+
+	def get_damage(self):
+		return self.damage
+
+	def update_position(self):
+		v = self.velocity
+		self.position.x += v.x
+		self.position.y += v.y
+
+	def update(self, delta):
+		self.update_position()
+
+		offset = self.view.get_offset()
+		self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
+
+
+class Heli(Enemy):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
 		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
@@ -304,8 +287,6 @@ class HeliChomper(Enemy):
 		self.swoop_original_y = 0
 		self.swoop_cooling_down = False
 		self.swoop_cooldown_time = 0
-
-		self.load_sprites()
 
 	def get_default_move_x_speed(self):
 		return 1
@@ -321,9 +302,6 @@ class HeliChomper(Enemy):
 
 	def get_default_damage(self):
 		return 4
-
-	def load_sprites(self):
-		pass
 
 	def swoop_up(self, y):
 		self.swooping = True
@@ -413,7 +391,7 @@ class HeliChomper(Enemy):
 			offset = view.get_offset()
 			self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
 
-class BlueHeliChomper(HeliChomper):
+class BlueHeli(Heli):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
 
@@ -432,7 +410,9 @@ class BlueHeliChomper(HeliChomper):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-class GreenHeliChomper(HeliChomper):
+		print('BlueHeli.load_sprites called');
+
+class GreenHeli(Heli):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
 
@@ -452,71 +432,8 @@ class GreenHeliChomper(HeliChomper):
 		self.rect = self.image.get_rect()
 
 
-class WallShooterPellet(sprite.Sprite):
-	def __init__(self, image, view, target, *position):
-		super().__init__()
-		self.image = image
-		self.rect = image.get_rect()
-		self.position = Vector2(position[0], position[1])
-		self.target = target
-		self.speed = 1
-		self.damage = 2
-		self.view = view
-		self.velocity = self.calculate_velocity()
 
-	def calculate_velocity(self):
-		dx = self.position.x - self.target[0]
-		dy = self.position.y - self.target[1]
-
-		dz = math.sqrt(dx**2 + dy**2)
-
-		speedx = dx/dz * self.speed
-		speedy = dy/dz * self.speed
-
-		return Vector2(speedx, speedy)
-
-	def get_rect(self):
-		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
-
-	def get_width(self):
-		return self.rect.width
-
-	def get_height(self):
-		return self.rect.height
-
-	def get_position(self):
-		return self.position
-
-	def get_bottom(self):
-		return int(self.position.y + int(self.rect.height / 2))
-
-	def get_top(self):
-		return int(self.position.y - int(self.rect.height / 2))
-
-	def get_left(self):
-		return int(self.position.x - int(self.rect.width / 2))
-
-	def get_right(self):
-		return int(self.position.x + int(self.rect.width / 2))
-
-	def collides_with(self, rect):
-		return self.get_rect().colliderect(rect)
-
-	def get_damage(self):
-		return self.damage
-
-	def update_position(self):
-		v = self.velocity
-		self.position.x += v.x
-		self.position.y += v.y
-
-	def update(self, delta):
-		self.update_position()
-
-		offset = self.view.get_offset()
-		self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
-
-class WallShooter(Enemy):
+class Blaster(Enemy):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
 		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
 		self.active = False
@@ -529,16 +446,11 @@ class WallShooter(Enemy):
 		self.max_shots = 4
 		self.targets = None
 
-		self.load_sprites()
-
 	def get_default_hit_points(self):
 		return 1
 
 	def get_default_damage(self):
 		return 4
-
-	def load_sprites(self):
-		pass
 
 	def set_open(self):
 		self.open = True
@@ -580,8 +492,9 @@ class WallShooter(Enemy):
 	def shoot(self):
 		target = self.targets.pop()
 		p = self.position
-		pellet = WallShooterPellet(self.pellet_image, self.view, target, p.x, p.y + (self.get_height() / 2))
-		self.pew_sprite_group.add(pellet)
+		pellet = Pellet(self.pellet_image, self.view, target, p.x, p.y + (self.get_height() / 2))
+		self.enemies.shoot(pellet)
+		# self.pew_sprite_group.add(pellet)
 		self.sounds.play_sound('eshoot')
 		self.shoot_time = 0
 		self.shots_fired += 1
@@ -659,7 +572,7 @@ class WallShooter(Enemy):
 			offset = view.get_offset()
 			self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
 
-class BlueWallShooter(WallShooter):
+class BlueBlaster(Blaster):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
 
@@ -696,7 +609,7 @@ class BlueWallShooter(WallShooter):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-class RedWallShooter(WallShooter):
+class RedBlaster(Blaster):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
 
@@ -734,7 +647,7 @@ class RedWallShooter(WallShooter):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-class Snapper(Enemy):
+class Cutter(Enemy):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
 		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
@@ -746,8 +659,6 @@ class Snapper(Enemy):
 
 		self.jumping = False
 		self.move_time = 0
-
-		self.load_sprites()
 
 	def get_default_move_x_speed(self):
 		return 5
@@ -813,41 +724,6 @@ class Snapper(Enemy):
 
 				self.position.x = start_x + int(displacement_x)
 				self.position.y = start_y - int(displacement_y)
-				# print('new pos=%d,%d'%(self.position.x, self.position.y))
-
-
-	# import math
-	# from processing import *
-
-	# X = 30
-	# Y = 30
-	# gravity=9.81
-	# angle=70
-	# velocity=80
-	# vx=velocity * math.cos(math.radians(angle))
-	# vy=velocity * math.sin(math.radians(angle))
-	# t=0
-
-	# def setup():
-	# 	strokeWeight(10)
-	# 	frameRate(100)
-	# 	size(400,400)
-
-	# def throwBall():
-	# 	global X, Y, radius, gravity, t,vx,vy
-	# 	background(100)
-	# 	fill(0,121,184)
-	# 	stroke(255)
-	# 	fc = environment.frameCount
-	# 	t +=0.02
-	# 	X = vx*t
-	# 	Y = 400 -(vy*t - (gravity/2)*t*t)
-
-	# 	ellipse(X,Y,30,30)
-
-
-	# draw = throwBall
-	# run()
 
 	def update(self, delta):
 		super().update(delta)
@@ -871,3 +747,257 @@ class Snapper(Enemy):
 
 			offset = self.view.get_offset()
 			self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
+
+class Flea(Enemy):
+	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
+		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+
+	def get_default_move_x_speed(self):
+		return 5
+
+	def get_default_move_y_speed(self):
+		return 5
+
+	def get_default_hit_points(self):
+		return 1
+
+	def get_default_damage(self):
+		return 4
+
+class BlueFlea(Flea):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			compressed=Animation([
+				dict(duration=0.1, image=image_at(Rect((137, 174), (14, 10)), colorkey=-1)),
+			]),
+			uncompressed=Animation([
+				dict(duration=0.1, image=image_at(Rect((177, 169), (14, 19)), colorkey=-1)),
+			]),
+		)
+
+		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class RedFlea(Flea):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			compressed=Animation([
+				dict(duration=0.1, image=image_at(Rect((137, 134), (14, 10)), colorkey=-1)),
+			]),
+			uncompressed=Animation([
+				dict(duration=0.1, image=image_at(Rect((177, 129), (14, 19)), colorkey=-1)),
+			]),
+		)
+
+		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class OctoBat(Enemy):
+	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+
+	def get_default_move_x_speed(self):
+		return 5
+
+	def get_default_move_y_speed(self):
+		return 5
+
+	def get_default_hit_points(self):
+		return 5
+
+	def get_default_damage(self):
+		return 8
+
+class RedOctoBat(OctoBat):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=0.1, image=image_at(Rect((16, 131), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((57, 131), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((96, 131), (16, 16)), colorkey=-1)),
+			]),
+		)
+
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class BlueOctoBat(OctoBat):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=0.1, image=image_at(Rect((16, 171), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((57, 171), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((96, 171), (16, 16)), colorkey=-1)),
+			]),
+		)
+
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class OrangeOctoBat(OctoBat):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=0.1, image=image_at(Rect((16, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((57, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((96, 91), (16, 16)), colorkey=-1)),
+			]),
+		)
+
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class Mambu(Enemy):
+	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+
+	def get_default_move_x_speed(self):
+		return 3
+
+	def get_default_hit_points(self):
+		return 1
+
+	def get_default_damage(self):
+		return 2
+
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			moving=Animation([
+				dict(duration=0.1, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1)),
+			]),
+			shooting=Animation([
+				dict(duration=0.1, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1)),
+			]),
+		)
+
+		start_frame = self.animations['moving'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+ENEMY_CLASS=dict(
+	blueheli = BlueHeli,
+	greenheli = GreenHeli,
+	bluebblaster = BlueBlaster,
+	redblaster = RedBlaster,
+	cutter = Cutter,
+	blueflea = BlueFlea,
+	redflea = RedFlea,
+	blueoctobat = BlueOctoBat,
+	redoctobat = RedOctoBat,
+	orangeoctobat = OrangeOctoBat,
+	mambu = Mambu
+)
+
+class Enemies:
+	def __init__(self, spritesheet_loader, sounds, stage):
+		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
+		self.stage = stage
+		self.sounds = sounds
+		self.spawn_range = 50
+		self.enemies = dict()
+		self.enemy_sprite_group = sprite.Group()
+		self.pew_sprite_group = sprite.Group()
+
+	def get_spritesheet_filename(self):
+		return 'enemies.png'
+
+	def load(self, name, type, *start_position, **attributes):
+		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
+
+	def spawn_nearby(self, player, zone, zoned):
+		stage = self.stage
+		view = stage.get_view()
+		vw, vh = view.get_width(), view.get_height()
+		offset = view.get_offset()
+
+		zenemies = list(filter((lambda name: self.enemies[name]['attributes']['zone'] == zone.get_name()), self.enemies.keys()))
+
+		enemies = list()
+		for name in zenemies:
+			enemy = self.enemies[name]
+			start_position = enemy['start_position']
+			count = enemy['count']
+			spawn_in_view = enemy['attributes']['spawn_in_view'] if 'spawn_in_view' in enemy['attributes'] else False
+			if count == 0:
+				spawn = False
+				if zoned or spawn_in_view:
+					spawn_range = enemy['attributes']['spawn_range'] if 'spawn_range' in enemy['attributes'] else -1
+					if (spawn_range > -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16))) and abs(start_position[0] - player.get_position().x) < self.spawn_range) or (spawn_range == -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16)))):
+						spawn = True
+				elif view.in_range(Rect((start_position[0], start_position[1]), (16, 16)), self.spawn_range):
+					spawn = True
+
+				if spawn:
+					enemy['count'] += 1
+					spawned_enemy = self.spawn(enemy['type'], name, player, start_position[0], start_position[1], **enemy['attributes'])
+					if spawned_enemy is not None:
+						enemies.append(spawned_enemy)
+
+		# return enemies
+
+	def spawn(self, type, name, player, *start_position, **attributes):
+		if type in ENEMY_CLASS:
+			enemy_class = ENEMY_CLASS[type]
+		else:
+			print('ERROR: UNknown enemy type %s'%type)
+			return None
+
+		enemy = enemy_class(name, self.spritesheet, self.stage, self.sounds, self, player, start_position[0], start_position[1], **attributes)
+
+		self.enemy_sprite_group.add(enemy)
+
+	def get_enemies(self):
+		return self.enemy_sprite_group
+
+	def shoot(self, pew):
+		self.pew_sprite_group.add(pew)
+
+	def update_pew_positions(self):
+		for pew in self.pew_sprite_group:
+			pew.update_position()
+			p = pew.get_position()
+			view = self.stage.get_view()
+			offset = view.get_offset()
+
+			if p.x - offset.x > view.get_width() or p.x < offset.x:
+				pew.kill()
+
+	def check_hits(self, player):
+		for pew in self.pew_sprite_group:
+			hit = pew.collides_with(player.get_rect())
+			if hit:
+				player.damage(pew.get_damage())
+				pew.kill()
+
+	def kill(self, enemy):
+		name = enemy.get_name()
+		self.enemies[name]['count'] -= 1
+		enemy.kill()
+		print('KILL %s count=%d'%(name, self.enemies[name]['count']))
+
+	def update(self, delta):
+		self.update_pew_positions()
+		self.pew_sprite_group.update(delta)
+		self.enemy_sprite_group.update(delta)
+
+	def draw(self, surface):
+		self.pew_sprite_group.draw(surface)
+		self.enemy_sprite_group.draw(surface)

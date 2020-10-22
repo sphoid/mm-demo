@@ -27,6 +27,7 @@ class Game:
 		self.transition_from_zone = None
 		self.transition_to_zone = None
 		self.transition_axis = None
+		self.zoned = False
 
 		self.debug = self.config.get_debug()
 
@@ -176,7 +177,8 @@ class Game:
 				player.damage(enemy.get_damage())
 
 		weapon = player.get_weapon()
-		weapon.check_hits(stage.enemy_sprite_group)
+		enemies = stage.get_enemies().get_enemies()
+		weapon.check_hits(enemies)
 
 	def check_climb(self):
 		player = self.player
@@ -273,8 +275,9 @@ class Game:
 		self.transition_from_zone = None
 		self.transition_to_zone = None
 		self.transition_axis = None
+		self.zoned = True
 
-	def check_zone_transition(self):
+	def update_zone(self):
 		player = self.player
 
 		if player.is_climbing() or (player.is_falling()):
@@ -282,11 +285,9 @@ class Game:
 			in_zone = self.stage.in_zone(self.player)
 
 			if not in_zone or not zone:
-				# print('Not in any zone')
 				return
 
 			if player.is_falling() and in_zone.get_position().y < zone.get_position().y:
-				# print('Cannot fall into upper zone')
 				return
 
 			if zone.get_name() != in_zone.get_name():
@@ -324,7 +325,6 @@ class Game:
 		else:
 			stage, player = self.stage, self.player
 			vw, vh = view.get_size()
-			# offset = view.get_offset()
 			zone = stage.get_zone()
 			zw, zh = zone.get_size()
 			zpos = zone.get_position()
@@ -337,16 +337,22 @@ class Game:
 			left_scroll_threshold = (zpos.x + zw) - int(vw / 2)
 
 			if p.x > right_scroll_threshold and p.x < left_scroll_threshold:
-				# print('scrolling right rthreshold=%d zw=%d zx=%d'%(right_scroll_threshold, zw, zpos.x))
 				offset_x = zpos.x + p.x - right_scroll_threshold
 			elif p.x >= left_scroll_threshold:
 				offset_x = zone.get_position().x + zw - vw
-				# print('scrolling left lthreshold=%d zw=%d zx=%d offsetx=%d'%(left_scroll_threshold, zw, zpos.x, offset_x))
 			elif p.x <= right_scroll_threshold:
-				# print('not scrolling')
 				offset_x = zpos.x
 
 			self.view.set_offset(Vector2(offset_x, view.get_offset().y))
+
+	def update_enemies(self, delta):
+		stage, player = self.stage, self.player
+		enemies = stage.get_enemies()
+		enemies.check_hits(player)
+		enemies.spawn_nearby(player, stage.get_zone(), self.zoned)
+		self.zoned = False
+
+		enemies.update(delta)
 
 	def update(self, delta):
 		player = self.player
@@ -361,12 +367,14 @@ class Game:
 		view = self.view
 
 		player.update_position()
-		self.check_zone_transition()
+		self.update_zone()
 		self.update_scrolling()
 		self.check_collision()
 		self.check_off_screen()
 
-		stage.update_enemies(player)
+		self.update_enemies(delta)
+
+		# stage.update_enemies(player)
 
 		player.update_status(delta)
 
@@ -386,6 +394,7 @@ class Game:
 		sprites = self.sprites
 		screen = self.screen
 		stage = self.stage
+		enemies = self.stage.get_enemies()
 		hud = self.hud
 		view = self.view
 
@@ -394,6 +403,7 @@ class Game:
 		buffer.fill(background_color)
 
 		stage.draw(buffer)
+		enemies.draw(buffer)
 
 		if self.debug['player_debug']:
 			player = self.player

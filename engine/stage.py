@@ -130,7 +130,7 @@ class Stage:
 
 	def set_zone(self, zone_name):
 		self.zone = self.zones[zone_name]
-		self.zoned = True
+		# self.zoned = True
 
 	def in_zone(self, player):
 		prect = player.get_rect()
@@ -200,26 +200,14 @@ class Stage:
 	def get_view(self):
 		return self.view
 
-	def get_active_enemies(self):
-		return self.enemy_sprite_group()
-
-	def update_enemies(self, player):
-		spawned_enemies = self.enemies.spawn_nearby(player, self.zone, self.zoned)
-		self.zoned = False
-
-		for enemy in spawned_enemies:
-			self.enemy_sprite_group.add(enemy)
+	def get_enemies(self):
+		return self.enemies
 
 	def update(self, delta):
 		self.tile_sprite_group.update(delta)
-		self.enemy_sprite_group.update(delta)
 
 	def draw(self, surface):
 		self.tile_sprite_group.draw(surface)
-		self.enemy_sprite_group.draw(surface)
-
-		for enemy in self.enemy_sprite_group:
-			enemy.pew_sprite_group.draw(surface)
 
 		if self.debug['map_debug']:
 			view = self.view
