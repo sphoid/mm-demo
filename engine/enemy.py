@@ -909,13 +909,13 @@ ENEMY_CLASS=dict(
 )
 
 class Enemies:
-	def __init__(self, spritesheet_loader, sounds, stage):
+	def __init__(self, spritesheet_loader, sounds, stage, explosions):
 		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
 		self.stage = stage
 		self.sounds = sounds
 		self.spawn_range = 50
 		self.enemies = dict()
-		self.explosions = Explosions(spritesheet_loader)
+		self.explosions = explosions
 		self.enemy_sprite_group = sprite.Group()
 		self.pew_sprite_group = sprite.Group()
 

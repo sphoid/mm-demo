@@ -1,5 +1,7 @@
 from pygame import sprite
 from pygame.sprite import Rect
+from pygame.math import Vector2
+import copy
 from .animation import *
 
 class Explosions:
@@ -15,8 +17,10 @@ class Explosions:
 		explosion = Explosion(self.spritesheet, view, position)
 		self.explosion_sprite_group.add(explosion)
 
-	def big_explode(self, position):
-		pass
+	def big_explode(self, view, position):
+		vs = [Vector2(0, -2), Vector2(1, -1), Vector2(2, 0), Vector2(1, 1), Vector2(0, 2), Vector2(-1, 1), Vector2(-2, -0), Vector2(-1, -1)]
+		for v in vs:
+			self.explosion_sprite_group.add(Explosion(self.spritesheet, view, position, loop=True, velocity=v))
 
 	def update(self, delta):
 		self.explosion_sprite_group.update(delta)
@@ -25,13 +29,18 @@ class Explosions:
 		self.explosion_sprite_group.draw(surface)
 
 class Explosion(sprite.Sprite):
-	def __init__(self, spritesheet, view, position):
+	def __init__(self, spritesheet, view, position, loop=False, velocity=None):
 		super().__init__()
 		self.spritesheet = spritesheet
-		self.position = position
+		self.position = copy.deepcopy(position)
 		self.view = view
 		self.animation = None
+		self.velocity = velocity
+		self.loop = loop
 		self.current_time = 0
+
+		# print('v=%d,%d'%(velocity.x, velocity.y))
+
 		self.load_sprites()
 
 	def load_sprites(self):
@@ -49,9 +58,18 @@ class Explosion(sprite.Sprite):
 		self.rect = self.image.get_rect()
 
 	def remove(self):
-		self.kill()
+		if not self.loop:
+			self.kill()
+
+	def update_position(self):
+		if self.velocity is not None:
+			p, v = self.position, self.velocity
+			p.x += v.x
+			p.y += v.y
 
 	def update(self, delta):
+		self.update_position()
+
 		animation = self.animation
 		self.current_time += delta
 		if self.current_time >= animation.next_time:

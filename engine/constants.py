@@ -1,4 +1,5 @@
 from enum import Enum
+import pygame
 
 class Direction(Enum):
 	N='N'
@@ -40,3 +41,5 @@ PLAYER_HALF_HEIGHT = int(PLAYER_HEIGHT / 2)
 
 TERMINAL_VELOCITY = 20
 GRAVITY = 9.8
+
+PLAYER_DEFEATED = pygame.USEREVENT + 1

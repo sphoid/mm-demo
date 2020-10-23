@@ -37,7 +37,11 @@ class LifeMeter(sprite.Sprite):
 		diff = self.player.get_max_hit_points() - self.player.get_hit_points()
 		if diff == 0:
 			return
+
 		damage_mask_rect = Rect((self.rect.left + 1, self.rect.top), (self.rect.width - 2, diff * 3))
+
+		if damage_mask_rect.height > self.rect.height:
+			damage_mask_rect.height = self.rect.height
 
 		draw.rect(surface, (0, 0, 0), damage_mask_rect)
 

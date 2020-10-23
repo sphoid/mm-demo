@@ -6,7 +6,7 @@ from .animation import *
 from .weapon import *
 
 class Player(sprite.Sprite):
-	def __init__(self, spritesheet_loader, sounds):
+	def __init__(self, spritesheet_loader, sounds, explosions):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 		self.sounds = sounds
@@ -16,6 +16,7 @@ class Player(sprite.Sprite):
 		self.max_hit_points = 28
 		self.hit_points = self.max_hit_points
 		self.stage = None
+		self.explosions = explosions
 
 		self.damage_time = 0
 		self.arrive_time = 0
@@ -412,25 +413,29 @@ class Player(sprite.Sprite):
 		self.hit_points -= damage
 		self.stop_x()
 
-		if self.climbing:
-			self.release_ladder()
-
-		if self.direction:
-			self.accelerate(-force, 0)
+		if self.hit_points < 0:
+			self.die()
 		else:
-			self.accelerate(force, 0)
+			if self.climbing:
+				self.release_ladder()
 
-		self.damage_time = 0
-		self.damaged = True
-		self.reset_animation = True
+			if self.direction:
+				self.accelerate(-force, 0)
+			else:
+				self.accelerate(force, 0)
 
-		self.sounds.play_sound('damage')
+			self.damage_time = 0
+			self.damaged = True
+			self.reset_animation = True
+
+			self.sounds.play_sound('damage')
 
 	def is_damaged(self):
 		return self.damaged
 
 	def die(self):
 		self.dead = True
+		self.kill()
 
 	def stop_shooting(self):
 		self.shooting = False
@@ -460,8 +465,8 @@ class Player(sprite.Sprite):
 				self.stop_x()
 				self.reset_animation = True
 
-		if self.hit_points <= 0:
-			self.die()
+		# if self.hit_points <= 0:
+		# 	self.die()
 
 	def set_view(self, view):
 		self.view = view

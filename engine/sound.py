@@ -21,13 +21,20 @@ class SoundLibrary:
 			dink=load_sound('dink.wav', self.mixer),
 		)
 
-	def play_sound(self, sound, blocking=False):
+	def play_sound(self, sound, blocking=False, end_event=None):
+		# print('Playing sound %s'%sound)
 		if blocking:
 			channel = self.sounds[sound].play()
 			while channel.get_busy():
 				time.wait(100)
 		else:
-			self.sounds[sound].play()
+			channel = self.sounds[sound].play()
+
+		# print(channel)
+
+		if end_event is not None:
+			channel.set_endevent(end_event)
+			# self.sounds[sound].play()
 
 class MusicPlayer:
 	def __init__(self, loader):

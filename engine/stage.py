@@ -10,7 +10,7 @@ from .enemy import *
 from .hazards import Hazards
 
 class Stage:
-	def __init__(self, config, loader, spritesheet_loader, sounds):
+	def __init__(self, config, loader, spritesheet_loader, sounds, explosions):
 		self.config = config
 		self.tile_height = 32
 		self.tile_width = 32
@@ -27,6 +27,7 @@ class Stage:
 		self.hazards = {}
 		self.tile_sprite_group = sprite.Group()
 		self.enemies = None
+		self.explosions = explosions
 		self.enemy_sprite_group = sprite.Group()
 		self.scroll_offset_x = 0
 		self.scroll_offset_y = 0
@@ -76,7 +77,7 @@ class Stage:
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.hazards[x, y] = Hazards.load(obj.type, Rect((x, y), (width, height)))
 
-		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self)
+		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self, self.explosions)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)

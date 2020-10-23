@@ -28,6 +28,9 @@ class Game:
 		self.transition_to_zone = None
 		self.transition_axis = None
 		self.zoned = False
+		self.player_dead = False
+
+		self.explosions = Explosions(self.spritesheet_loader)
 
 		self.debug = self.config.get_debug()
 
@@ -36,13 +39,13 @@ class Game:
 		self.init_hud()
 
 	def init_stage(self):
-		self.stage = Stage(self.config, self.loader, self.spritesheet_loader, self.sounds)
+		self.stage = Stage(self.config, self.loader, self.spritesheet_loader, self.sounds, self.explosions)
 		self.stage.load()
 		self.stage.set_view(self.view)
 		self.music_player.play(self.stage.get_music_track())
 
 	def init_player(self):
-		self.player = Player(self.spritesheet_loader, self.sounds)
+		self.player = Player(self.spritesheet_loader, self.sounds, self.explosions)
 		self.sprites.add(self.player)
 		self.player.set_view(self.view)
 
@@ -356,36 +359,41 @@ class Game:
 
 	def update(self, delta):
 		player = self.player
-
-		self.check_climb()
-		self.apply_gravity()
-
+		view = self.view
 		buffer = self.buffer
 		sprites = self.sprites
 		hud = self.hud
 		stage = self.stage
-		view = self.view
+		explosions = self.explosions
 
-		player.update_position()
-		self.update_zone()
-		self.update_scrolling()
-		self.check_collision()
-		self.check_off_screen()
+		if player.is_dead():
+			if not self.player_dead:
+				self.player_dead = True
+				self.explosions.big_explode(view, player.get_position())
+				self.music_player.stop()
+				self.sounds.play_sound('defeat', False, PLAYER_DEFEATED)
+		else:
+			self.check_climb()
+			self.apply_gravity()
+			player.update_position()
+			self.update_zone()
+			self.update_scrolling()
+			self.check_collision()
+			self.check_off_screen()
 
-		self.update_enemies(delta)
+			self.update_enemies(delta)
 
-		player.update_status(delta)
+			player.update_status(delta)
 
-		view.update()
+			view.update()
 
 		sprites.update(delta)
 		stage.update(delta)
 		hud.update(delta)
+		explosions.update(delta)
 
-		if self.player.is_dead():
-			self.music_player.stop()
-			self.sounds.play_sound('defeat', True)
-			self.game.set_mode(MODE_GAME_OVER)
+	def game_over(self):
+		self.game.set_mode(MODE_GAME_OVER)
 
 	def render(self):
 		buffer = self.buffer
@@ -413,6 +421,7 @@ class Game:
 			sprites.draw(buffer)
 
 		hud.draw(buffer)
+		self.explosions.draw(buffer)
 
 		if SCALE_FACTOR > 1:
 			screen.blit(transform.smoothscale(buffer, (SCREEN_W, SCREEN_W)), (0, 0))
@@ -425,6 +434,9 @@ class Game:
 		player = self.player
 		debug = self.logger.debug
 		if event.type in (pygame.KEYDOWN, pygame.KEYUP):
+			if player.is_dead():
+				return
+
 			if event.key == pygame.K_RIGHT:
 				if event.type == pygame.KEYDOWN:
 					# debug('R Down')
@@ -486,3 +498,5 @@ class Game:
 					player.stop_shooting()
 			elif event.key == pygame.K_ESCAPE:
 				self.game.quit()
+		elif event.type == PLAYER_DEFEATED:
+			self.game_over()
