@@ -2,11 +2,12 @@ import math
 from pygame import sprite, time
 from pygame.sprite import Rect
 from pygame.math import Vector2
+from .entity import *
 from .constants import *
 from .animation import *
 from .explosion import *
 
-class Enemy(sprite.Sprite):
+class Enemy(Entity):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
 		super().__init__()
 		self.name = name
@@ -14,6 +15,11 @@ class Enemy(sprite.Sprite):
 		self.enemies = enemies
 		self.player = player
 		self.view = player.get_view()
+
+		if 'gravity' in attributes:
+			self.gravity = attributes['gravity']
+		else:
+			self.gravity = False
 
 		if 'direction' in attributes:
 			self.direction = attributes['direction']
@@ -58,14 +64,13 @@ class Enemy(sprite.Sprite):
 		else:
 			self.zone = None
 
-		# self.start_position = Vector2(position[0], position[1])
-		# self.position = Vector2(self.start_position[0], self.start_position[1])
 		self.stage = stage
 		self.sounds = sounds
 
 		self.reset_animation = False
 		self.current_time = 0
 
+		self.falling = False
 		self.dead = False
 
 		self.load_sprites()
@@ -102,56 +107,8 @@ class Enemy(sprite.Sprite):
 	def get_zone(self):
 		return self.zone
 
-	def get_rect(self):
-		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
-
-	def get_width(self):
-		return self.rect.width
-
-	def get_height(self):
-		return self.rect.height
-
 	def get_start_position(self):
 		return self.start_position
-
-	def get_position(self):
-		return self.position
-
-	def set_position(self, *position):
-		self.position = int(position[0]), int(position[1])
-
-	def get_bottom(self):
-		return int(self.position.y + int(self.rect.height / 2))
-
-	def get_top(self):
-		return int(self.position.y - int(self.rect.height / 2))
-
-	def get_left(self):
-		return int(self.position.x - int(self.rect.width / 2))
-
-	def get_right(self):
-		return int(self.position.x + int(self.rect.width / 2))
-
-	def accelerate(self, *v):
-		self.velocity.x += v[0]
-		self.velocity.y += v[1]
-
-	def deccelerate(self, *v):
-		self.velocity.x -= v[0]
-		self.velocity.y -= v[1]
-
-	def get_velocity(self):
-		return self.velocity
-
-	def set_velocity(self, *v):
-		self.velocity.x = v[0]
-		self.velocity.y = v[1]
-
-	def set_velocity_x(self, v):
-		self.velocity.x = v
-
-	def set_velocity_y(self, v):
-		self.velocity.y = v
 
 	def move_right(self):
 		self.direction = 1
@@ -160,9 +117,6 @@ class Enemy(sprite.Sprite):
 	def move_left(self):
 		self.direction = 0
 		self.accelerate(-self.move_speed_x, 0)
-
-	def stop_x(self):
-		self.set_velocity_x(0)
 
 	def move_down(self):
 		self.accelerate(0, self.move_speed_y)
@@ -182,16 +136,8 @@ class Enemy(sprite.Sprite):
 	def die(self):
 		self.dead = True
 
-	def collides_with(self, rect):
-		return self.get_rect().colliderect(rect)
-
 	def react(self, delta):
 		pass
-
-	def update_position(self, delta):
-		v = self.get_velocity()
-		self.position.x += v.x
-		self.position.y += v.y
 
 	def update_status(self):
 		if self.hit_points <= 0:
@@ -698,7 +644,7 @@ class Cutter(Enemy):
 		self.angle = angle
 		self.jump_start_time = delta
 		self.jump_time = 0
-		self.jump_velocity = 15
+		self.jump_velocity = 17
 
 	def react(self, delta):
 		if not self.jumping:
@@ -755,10 +701,11 @@ class Flea(Enemy):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
 		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
 
-	def get_default_move_x_speed(self):
-		return 5
+		self.jump_speed = 9
+		self.jumping = False
+		self.compressing = False
 
-	def get_default_move_y_speed(self):
+	def get_default_move_x_speed(self):
 		return 5
 
 	def get_default_hit_points(self):
@@ -766,6 +713,13 @@ class Flea(Enemy):
 
 	def get_default_damage(self):
 		return 4
+
+	def jump(self):
+		self.jumping = True
+
+	def update(self):
+		pass
+
 
 class BlueFlea(Flea):
 	def load_sprites(self):
@@ -776,7 +730,7 @@ class BlueFlea(Flea):
 				dict(duration=0.1, image=image_at(Rect((137, 174), (14, 10)), colorkey=-1)),
 			]),
 			uncompressed=Animation([
-				dict(duration=0.1, image=image_at(Rect((177, 169), (14, 19)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((177, 169), (14, 19)), colorkey=-1), callback=jump),
 			]),
 		)
 
@@ -793,7 +747,7 @@ class RedFlea(Flea):
 				dict(duration=0.1, image=image_at(Rect((137, 134), (14, 10)), colorkey=-1)),
 			]),
 			uncompressed=Animation([
-				dict(duration=0.1, image=image_at(Rect((177, 129), (14, 19)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((177, 129), (14, 19)), colorkey=-1), callback=jump),
 			]),
 		)
 

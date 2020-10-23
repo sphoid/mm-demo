@@ -39,8 +39,8 @@ class Stage:
 		self.start_zone = None
 		self.view = None
 
-		self.warp_start_position = 0, 0
-		self.warp_land_position = 0, 0
+		self.warp_start_position = Vector2(0, 0)
+		self.warp_land_position = Vector2(0, 0)
 
 		self.debug = self.config.get_debug()
 

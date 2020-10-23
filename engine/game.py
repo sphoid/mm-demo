@@ -210,29 +210,27 @@ class Game:
 			elif player.get_top() > ladder.get_top():
 				player.stop_climbing_over()
 
-	def apply_gravity(self):
-		player = self.player
-
-		if player.is_climbing():
+	def apply_gravity(self, entity):
+		if not entity.is_gravity_enabled():
 			return
 
-		if player.is_falling() or player.is_warping():
-			v = player.get_velocity()
+		if entity.is_falling() or entity.is_warping():
+			v = entity.get_velocity()
 			if v.y == 0:
-				player.accelerate(0, 1)
+				entity.accelerate(0, 1)
 			elif v.y < TERMINAL_VELOCITY:
-				player.accelerate(0, 0.5)
+				entity.accelerate(0, 0.5)
 			else:
-				player.set_velocity_y(TERMINAL_VELOCITY)
+				entity.set_velocity_y(TERMINAL_VELOCITY)
 		else:
 			stage = self.stage
-			prect = player.get_rect()
+			prect = entity.get_rect()
 			platform_below = stage.platform_below(prect)
 			ladder_behind = stage.ladder_behind(prect)
 			ladder_below = stage.ladder_below(prect)
 
 			if not platform_below and not ladder_below and not ladder_behind:
-				player.fall()
+				entity.fall()
 
 	def grab_ladder_behind(self, player):
 		stage = self.stage
@@ -374,8 +372,10 @@ class Game:
 				self.sounds.play_sound('defeat', False, PLAYER_DEFEATED)
 		else:
 			self.check_climb()
-			self.apply_gravity()
-			player.update_position()
+			self.apply_gravity(self.player)
+			for enemy in stage.get_enemies().get_enemies():
+				self.apply_gravity(enemy)
+			player.update_position(delta)
 			self.update_zone()
 			self.update_scrolling()
 			self.check_collision()

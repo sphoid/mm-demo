@@ -1,11 +1,12 @@
 from pygame import sprite
 from pygame.sprite import Rect
 from pygame.math import Vector2
+from .entity import *
 from .constants import *
 from .animation import *
 from .weapon import *
 
-class Player(sprite.Sprite):
+class Player(Entity):
 	def __init__(self, spritesheet_loader, sounds, explosions):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
@@ -147,13 +148,9 @@ class Player(sprite.Sprite):
 	def set_direction_right(self):
 		self.direction = 1
 
-	# def toggle_climb_hand_side(self, index):
-	# 	self.climb_hand_side = int(not self.climb_hand_side)
-
 	def set_stage(self, stage):
 		self.stage = stage
 		self.map_size = stage.get_map_size()
-		# print(stage.get_warp_start_position())
 		self.warp(stage.get_warp_start_position())
 
 	def get_stage(self):
@@ -171,33 +168,8 @@ class Player(sprite.Sprite):
 	def get_hit_points(self):
 		return self.hit_points
 
-	def get_rect(self):
-		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
-
 	def get_width(self):
 		return 16
-
-	def get_height(self):
-		return self.rect.height
-
-	def get_position(self):
-		return self.position
-
-	def set_position(self, *position):
-		self.position.x = int(position[0])
-		self.position.y = int(position[1])
-
-	def get_bottom(self):
-		return int(self.position.y + int(self.rect.height / 2))
-
-	def get_top(self):
-		return int(self.position.y - int(self.rect.height / 2))
-
-	def get_left(self):
-		return int(self.position.x - int(self.get_width() / 2))
-
-	def get_right(self):
-		return int(self.position.x + int(self.get_width() / 2))
 
 	def get_direction(self):
 		return self.direction
@@ -219,84 +191,6 @@ class Player(sprite.Sprite):
 			self.reset_animation = True
 			self.sounds.play_sound('land')
 
-		# print('collide bottom y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
-
-	def collide_bottom_right(self, x, y):
-		self.set_velocity(0, 0)
-		self.position.x = int(x - int(self.rect.width / 2))
-		self.position.y = int(y - int(self.rect.height / 2))
-		self.falling = False
-		self.reset_animation = True
-		self.sounds.play_sound('land')
-		# print('collide bottom_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
-
-	def collide_bottom_left(self, x, y):
-		self.set_velocity(0, 0)
-		self.position.x = int(x + int(self.rect.width / 2))
-		self.position.y = int(y - int(self.rect.height / 2))
-		self.falling = False
-		self.reset_animation = True
-		self.sounds.play_sound('land')
-		# print('collide bottom_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
-
-	def collide_top(self, y):
-		self.velocity.y = 0
-		self.position.y = int(y + int(self.rect.height / 2))
-		self.falling = True
-		# print('collide top y=%d pos=%d,%d'%(y, self.position.x, self.position.y))
-
-	def collide_top_right(self, x, y):
-		self.set_velocity(0, 0)
-		self.position.x = int(x - int(self.rect.width / 2))
-		self.position.y = int(y + int(self.rect.height / 2))
-		self.reset_animation = True
-		self.sounds.play_sound('land')
-		# print('collide top_right x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
-
-	def collide_top_left(self, x, y):
-		self.set_velocity(0, 0)
-		self.position.x = int(x + int(self.rect.width / 2))
-		self.position.y = int(y + int(self.rect.height / 2))
-		self.reset_animation = True
-		self.sounds.play_sound('land')
-		# print('collide top_left x=%d y=%d pos=%d,%d'%(x, y, self.position.x, self.position.y))
-
-	def collide_right(self, x):
-		if self.velocity.x > 0:
-			self.velocity.x = 0
-		self.position.x = int(x - int(self.rect.width / 2))
-		self.reset_animation = True
-		# print('collide right x=%d pos=%d,%d'%(x, self.position.x, self.position.y))
-
-	def collide_left(self, x):
-		if self.velocity.x < 0:
-			self.velocity.x = 0
-		self.position.x = int(x + int(self.rect.width / 2))
-		self.reset_animation = True
-
-		# print('collide_left new pos=%d,%d'%(self.position.x, self.position.y))
-
-	def accelerate(self, *v):
-		self.velocity.x += v[0]
-		self.velocity.y += v[1]
-
-	def deccelerate(self, *v):
-		self.velocity.x -= v[0]
-		self.velocity.y -= v[1]
-
-	def get_velocity(self):
-		return self.velocity
-
-	def set_velocity(self, *v):
-		self.velocity.x = v[0]
-		self.velocity.y = v[1]
-
-	def set_velocity_x(self, v):
-		self.velocity.x = v
-
-	def set_velocity_y(self, v):
-		self.velocity.y = v
-
 	def move_right(self):
 		self.direction = 1
 		if self.velocity.x < 0:
@@ -310,10 +204,6 @@ class Player(sprite.Sprite):
 			self.accelerate(-(self.move_speed * 2), 0)
 		else:
 			self.accelerate(-self.move_speed, 0)
-
-	def stop_x(self):
-		self.set_velocity_x(0)
-		self.reset_animation = True
 
 	def is_climbing(self):
 		return self.climbing
@@ -329,11 +219,13 @@ class Player(sprite.Sprite):
 			self.rect.width = 16
 			self.position.y += int(self.rect.height / 2)
 		self.climbing = True
+		self.gravity = False
 		self.falling = False
 		self.reset_animation = True
 
 	def release_ladder(self):
 		self.climbing = False
+		self.gravity = True
 		self.falling = True
 		self.reset_animation = True
 
@@ -351,6 +243,7 @@ class Player(sprite.Sprite):
 			self.position.y = int(y - PLAYER_HALF_HEIGHT)
 		self.climbing = False
 		self.climbing_over = False
+		self.gravity = True
 		self.reset_animation = True
 
 	def climb_up(self):
@@ -366,6 +259,9 @@ class Player(sprite.Sprite):
 	def warp(self, start_position):
 		self.set_position(start_position.x, start_position.y)
 		self.warping = True
+		self.gravity = True
+
+		print('Warping start=%d,%d'%(self.position.x, self.position.y))
 
 	def arrive(self, y):
 		self.velocity.y = 0
@@ -382,18 +278,6 @@ class Player(sprite.Sprite):
 	def stop_arriving(self):
 		self.arriving = False
 		self.reset_animation = True
-
-	def is_warping(self):
-		return self.warping
-
-	def fall(self):
-		self.falling = True
-
-	def is_falling(self):
-		return self.falling
-
-	def is_warping(self):
-		return self.warping
 
 	def jump(self):
 		if self.climbing:
@@ -443,13 +327,6 @@ class Player(sprite.Sprite):
 
 	def get_map_offset(self):
 		return self.stage.get_scroll_offset_x()
-
-	def update_position(self):
-		v = self.get_velocity()
-		self.position.x += v.x
-		self.position.y += v.y
-
-		# print('pos=%d,%d'%(self.position.x, self.position.y))
 
 	def update_status(self, delta):
 		if self.arriving:
