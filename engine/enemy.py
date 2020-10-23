@@ -4,6 +4,7 @@ from pygame.sprite import Rect
 from pygame.math import Vector2
 from .constants import *
 from .animation import *
+from .explosion import *
 
 class Enemy(sprite.Sprite):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
@@ -57,11 +58,10 @@ class Enemy(sprite.Sprite):
 		else:
 			self.zone = None
 
-		self.start_position = Vector2(position[0], position[1])
-		self.position = Vector2(self.start_position[0], self.start_position[1])
+		# self.start_position = Vector2(position[0], position[1])
+		# self.position = Vector2(self.start_position[0], self.start_position[1])
 		self.stage = stage
 		self.sounds = sounds
-
 
 		self.reset_animation = False
 		self.current_time = 0
@@ -69,6 +69,9 @@ class Enemy(sprite.Sprite):
 		self.dead = False
 
 		self.load_sprites()
+
+		self.start_position = Vector2(position[0] + (self.get_width() / 2), position[1] + (self.get_height() / 2))
+		self.position = Vector2(position[0] + (self.get_width() / 2), position[1] + (self.get_height() / 2))
 
 		print("SPAWN: %s direction=%d"%(self.name, self.direction))
 
@@ -192,9 +195,8 @@ class Enemy(sprite.Sprite):
 
 	def update_status(self):
 		if self.hit_points <= 0:
+			self.enemies.explode(self)
 			self.die()
-
-
 
 	def check_off_screen(self):
 		pass
@@ -280,7 +282,7 @@ class Pellet(sprite.Sprite):
 class Heli(Enemy):
 	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+		super().__init__(name, spritesheet, stage,sounds, enemies, player, *position, **attributes)
 		self.swooping = False
 		self.swoop_direction = 0
 		self.swoop_target_y = 0
@@ -389,7 +391,7 @@ class Heli(Enemy):
 			p = self.position
 			view = self.stage.get_view()
 			offset = view.get_offset()
-			self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
 
 class BlueHeli(Heli):
 	def load_sprites(self):
@@ -570,7 +572,7 @@ class Blaster(Enemy):
 			p = self.position
 			view = self.view
 			offset = view.get_offset()
-			self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
 
 class BlueBlaster(Blaster):
 	def load_sprites(self):
@@ -714,7 +716,7 @@ class Cutter(Enemy):
 			self.jump_time += delta
 			# gravity = -9.8
 			time_diff = (self.jump_time - self.jump_start_time) * 7
-			print('time_diff=%f'%time_diff)
+			# print('time_diff=%f'%time_diff)
 			if time_diff > 0:
 				half_gravity_time_squared = GRAVITY * (time_diff * time_diff) * 0.5
 				displacement_x = self.jump_velocity * math.sin(self.angle) * time_diff
@@ -913,6 +915,7 @@ class Enemies:
 		self.sounds = sounds
 		self.spawn_range = 50
 		self.enemies = dict()
+		self.explosions = Explosions(spritesheet_loader)
 		self.enemy_sprite_group = sprite.Group()
 		self.pew_sprite_group = sprite.Group()
 
@@ -970,6 +973,10 @@ class Enemies:
 	def shoot(self, pew):
 		self.pew_sprite_group.add(pew)
 
+	def explode(self, enemy):
+		x, y = enemy.get_rect().center
+		self.explosions.explode(self.stage.get_view(), Vector2(x, y))
+
 	def update_pew_positions(self):
 		for pew in self.pew_sprite_group:
 			pew.update_position()
@@ -997,7 +1004,9 @@ class Enemies:
 		self.update_pew_positions()
 		self.pew_sprite_group.update(delta)
 		self.enemy_sprite_group.update(delta)
+		self.explosions.update(delta)
 
 	def draw(self, surface):
 		self.pew_sprite_group.draw(surface)
 		self.enemy_sprite_group.draw(surface)
+		self.explosions.draw(surface)

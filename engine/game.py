@@ -170,7 +170,7 @@ class Game:
 				player.collide_right(offset.x + zw)
 
 		if not player.is_damaged():
-			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.enemy_sprite_group))
+			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.get_enemies().get_enemies()))
 			if len(colliding_enemies) > 0:
 				enemy = colliding_enemies[0]
 				print('enemy hit epos=%d,%d ppos=%d, %d'%(enemy.get_position().x, enemy.get_position().y, player.get_position().x, player.get_position().y))
@@ -373,8 +373,6 @@ class Game:
 		self.check_off_screen()
 
 		self.update_enemies(delta)
-
-		# stage.update_enemies(player)
 
 		player.update_status(delta)
 
