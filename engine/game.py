@@ -59,18 +59,74 @@ class Game:
 		self.life_meter = LifeMeter(self.spritesheet_loader, self.sounds, self.player)
 		self.hud = HudGroup([self.life_meter])
 
-	def check_off_screen(self):
-		stage = self.stage
-		player = self.player
-		zone = stage.get_zone()
-		mh = stage.get_map_height()
+	def check_collision(self, entity):
+		collided = False
+		colliding_platforms = list(filter((lambda platform: platform.collides_with(entity.get_rect())), self.stage.get_platforms()))
+		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(entity.get_rect())), self.stage.get_ladders()))
+		v = entity.get_velocity()
+		p = entity.get_position()
+		if len(colliding_platforms) > 0:
+			for platform in colliding_platforms:
+				pleft, pright, ptop, pbottom, pwidth, pheight = platform.get_left(), platform.get_right(), platform.get_top(), platform.get_bottom(), platform.get_width(), platform.get_height()
+				left, right, top, bottom = entity.get_left(), entity.get_right(), entity.get_top(), entity.get_bottom()
 
-		if player.get_top() > mh + player.get_height():
-			player.die()
+				if v.y > 0 and v.x == 0 and ptop < bottom :
+					entity.collide_bottom(ptop)
+					collided = True
+				elif v.y < 0 and v.x == 0 and pbottom > top:
+					entity.collide_top(pbottom)
+					collided = True
+				elif v.x > 0 and v.y == 0 and pleft < right and bottom > ptop:
+					entity.collide_right(pleft)
+					collided = True
+				elif v.x < 0 and v.y == 0 and pright > left and bottom > ptop:
+					entity.collide_left(pright)
+					collided = True
+				elif v.x > 0 and v.y > 0:
+					if p.x >= pleft and p.x <= pright and ptop < bottom:
+						entity.collide_bottom(ptop)
+						collided = True
+					elif left < pright and p.x > pright:
+						entity.collide_left(pright)
+						collided = True
+					elif right > pleft and right < pright:
+						entity.collide_right(pleft)
+						collided = True
+				elif v.x > 0 and v.y < 0:
+					if p.x >= pleft and p.x <= pright and pbottom > top:
+						entity.collide_top(pbottom)
+						collided = True
+					elif right > pleft and right < pright:
+						entity.collide_right(pleft)
+						collided = True
+				elif v.x < 0 and v.y > 0:
+					if p.x >= pleft and p.x <= pright and ptop < bottom:
+						entity.collide_bottom(ptop)
+						collided = True
+					elif right > pleft and p.x < pleft:
+						entity.collide_right(pleft)
+						collided = True
+					elif left < pright and left > pleft:
+						entity.collide_left(pright)
+						collided = True
+				elif v.x < 0 and v.y < 0:
+					if right >= pleft and left <= pright and pbottom > top:
+						entity.collide_top(pbottom)
+						collided = True
+					elif left < pright and left > pleft:
+						entity.collide_left(pright)
+						collided = True
+		elif entity.is_gravity_enabled() and len(colliding_ladders) > 0:
+			for ladder in colliding_ladders:
+				if v.y > 0 and ladder.get_top() < entity.get_bottom() and (entity.get_bottom() - ladder.get_top()) < PLAYER_HALF_HEIGHT:
+					entity.collide_bottom(ladder.get_top())
+					collided = True
 
-	def check_collision(self):
-		stage = self.stage
+		return collided
+
+	def check_player_collision(self):
 		player = self.player
+		stage = self.stage
 
 		if player.is_arriving():
 			return
@@ -87,77 +143,9 @@ class Game:
 			hazard = colliding_hazards[0]
 			player.damage(hazard.get_damage())
 
-		colliding_platforms = list(filter((lambda platform: platform.collides_with(player.get_rect())), stage.get_platforms()))
-		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(player.get_rect())), stage.get_ladders()))
-		v = player.get_velocity()
-		if len(colliding_platforms) > 0:
-			p = player.get_position()
-			for platform in colliding_platforms:
-				pleft, pright, ptop, pbottom, pwidth, pheight = platform.get_left(), platform.get_right(), platform.get_top(), platform.get_bottom(), platform.get_width(), platform.get_height()
-				left, right, top, bottom = player.get_left(), player.get_right(), player.get_top(), player.get_bottom()
-
-				if v.y > 0 and v.x == 0 and ptop < bottom :
-					# print('collide bottom platform')
-					player.collide_bottom(ptop)
-					# print('new bottom=%d'%player.get_bottom())
-				elif v.y < 0 and v.x == 0 and pbottom > top:
-					# print('collide top platform')
-					player.collide_top(pbottom)
-				elif v.x > 0 and v.y == 0 and pleft < right and bottom > ptop:
-					# print('collide right platform')
-					# if self.debug['map_debug']:
-						# platform.flag()
-					# print('bottom=%d ptop=%d'%(player.get_bottom(), platform.get_top()))
-					player.collide_right(pleft)
-				elif v.x < 0 and v.y == 0 and pright > left and bottom > ptop:
-					# print('collide left platform')
-					player.collide_left(pright)
-
-				elif v.x > 0 and v.y > 0:
-					if p.x >= pleft and p.x <= pright and ptop < bottom:
-						# print('collide bottom platform while falling right')
-						player.collide_bottom(ptop)
-						# print('new bottom=%d'%player.get_bottom())
-					elif left < pright and p.x > pright:
-						# print('collide left platform while falling right')
-						player.collide_left(pright)
-					elif right > pleft and right < pright:
-						# print('collide right platform while falling right')
-						player.collide_right(pleft)
-
-				elif v.x > 0 and v.y < 0:
-					if p.x >= pleft and p.x <= pright and pbottom > top:
-						# print('collide top platform while jumping right')
-						player.collide_top(pbottom)
-					elif right > pleft and right < pright:
-						# print('collide right platform while jumping right')
-						player.collide_right(pleft)
-
-				elif v.x < 0 and v.y > 0:
-					if p.x >= pleft and p.x <= pright and ptop < bottom:
-						# print('collide bottom platform while falling left')
-						player.collide_bottom(ptop)
-					elif right > pleft and p.x < pleft:
-						# print('collide right platform while falling left')
-						player.collide_right(pleft)
-					elif left < pright and left > pleft:
-						# print('collide left platform while falling left')
-						player.collide_left(pright)
-
-				elif v.x < 0 and v.y < 0:
-					if right >= pleft and left <= pright and pbottom > top:
-						# print('collide top platform while jumping left')
-						player.collide_top(pbottom)
-					elif left < pright and left > pleft:
-						# print('collide left platform while jumping left')
-						player.collide_left(pright)
-
-		elif not player.is_climbing() and len(colliding_ladders) > 0:
-			p = player.get_position()
-			for ladder in colliding_ladders:
-				if v.y > 0 and ladder.get_top() < player.get_bottom() and (player.get_bottom() - ladder.get_top()) < PLAYER_HALF_HEIGHT:
-					player.collide_bottom(ladder.get_top())
-		else:
+		collided = self.check_collision(player)
+		
+		if not collided:
 			zone = self.stage.get_zone()
 			zpos = zone.get_position()
 			zw = zone.get_width()
@@ -179,11 +167,16 @@ class Game:
 				print('enemy hit epos=%d,%d ppos=%d, %d'%(enemy.get_position().x, enemy.get_position().y, player.get_position().x, player.get_position().y))
 				player.damage(enemy.get_damage())
 
-		weapon = player.get_weapon()
-		enemies = stage.get_enemies().get_enemies()
-		weapon.check_hits(enemies)
+	def check_player_off_map(self):
+		stage = self.stage
+		player = self.player
+		zone = stage.get_zone()
+		mh = stage.get_map_height()
 
-	def check_climb(self):
+		if player.get_top() > mh + player.get_height():
+			player.die()
+
+	def check_player_climb(self):
 		player = self.player
 
 		if not player.is_climbing():
@@ -210,11 +203,16 @@ class Game:
 			elif player.get_top() > ladder.get_top():
 				player.stop_climbing_over()
 
+	def check_weapon_hits(self):
+		weapon = self.player.get_weapon()
+		enemies = self.stage.get_enemies().get_enemies()
+		weapon.check_hits(enemies)
+
 	def apply_gravity(self, entity):
 		if not entity.is_gravity_enabled():
 			return
 
-		if entity.is_falling() or entity.is_warping():
+		if entity.is_falling():
 			v = entity.get_velocity()
 			if v.y == 0:
 				entity.accelerate(0, 1)
@@ -237,7 +235,6 @@ class Game:
 		prect = player.get_rect()
 		ladder = stage.ladder_behind(prect)
 		if ladder:
-			print('Grabbing ladder behind')
 			player.grab_ladder(ladder)
 			return True
 
@@ -248,7 +245,6 @@ class Game:
 		prect = player.get_rect()
 		ladder = stage.ladder_below(prect)
 		if ladder:
-			print('Grabbing ladder below')
 			player.grab_ladder(ladder, True)
 			return True
 
@@ -267,8 +263,6 @@ class Game:
 				self.transition_axis = 'y'
 			else:
 				self.transition_axis = 'x'
-
-			print('transition to zone %s axis=%s'%(to_zone.get_name(), self.transition_axis))
 
 	def stop_transition_zones(self):
 		self.stage.set_zone(self.transition_to_zone.get_name())
@@ -309,8 +303,6 @@ class Game:
 				elif to_p.y > from_p.y and offset.y < to_p.y:
 					view.set_offset(Vector2(offset.x, offset.y + self.transition_speed))
 				else:
-					print('arrived at zone %s'% s_to.get_name())
-					print('setting view offset %d,%d'%(offset.x, to_p.y))
 					view.set_offset(Vector2(offset.x, to_p.y))
 					self.stop_transition_zones()
 			elif self.transition_axis == 'x':
@@ -319,8 +311,6 @@ class Game:
 				elif to_p.x < from_p.x and offset.x > to_p.x:
 					view.set_offset(Vector2(offset.x - self.transition_speed, offset.y))
 				else:
-					print('arrived at zone %s'% s_to.get_name())
-					print('setting view offset %d,%d'%(to_p.x, offset.y))
 					view.set_offset(Vector2(to_p.x, offset.y))
 					self.stop_transition_zones()
 		else:
@@ -349,11 +339,27 @@ class Game:
 	def update_enemies(self, delta):
 		stage, player = self.stage, self.player
 		enemies = stage.get_enemies()
+
+		for enemy in enemies.get_enemies():
+			self.apply_gravity(enemy)
+
 		enemies.check_hits(player)
 		enemies.spawn_nearby(player, stage.get_zone(), self.zoned)
 		self.zoned = False
 
 		enemies.update(delta)
+
+	def update_player(self, delta):
+		player = self.player
+
+		self.check_player_climb()
+		self.apply_gravity(player)
+		self.check_player_collision()
+		self.check_player_off_map()
+
+		player.update_position(delta)
+		player.update_status(delta)
+
 
 	def update(self, delta):
 		player = self.player
@@ -371,19 +377,12 @@ class Game:
 				self.music_player.stop()
 				self.sounds.play_sound('defeat', False, PLAYER_DEFEATED)
 		else:
-			self.check_climb()
-			self.apply_gravity(self.player)
-			for enemy in stage.get_enemies().get_enemies():
-				self.apply_gravity(enemy)
-			player.update_position(delta)
+			self.update_player(delta)
+			self.update_enemies(delta)
+			self.check_weapon_hits()
+
 			self.update_zone()
 			self.update_scrolling()
-			self.check_collision()
-			self.check_off_screen()
-
-			self.update_enemies(delta)
-
-			player.update_status(delta)
 
 			view.update()
 
@@ -443,7 +442,7 @@ class Game:
 					if not player.is_climbing() and not player.is_warping():
 						player.move_right()
 					elif player.is_climbing():
-						player.set_direction(1)
+						player.set_direction_right()
 				elif event.type == pygame.KEYUP:
 					# debug('R Up')
 					if player.get_velocity().x > 0:

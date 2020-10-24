@@ -159,6 +159,7 @@ class Stage:
 		return colliding_ladders[0] if len(colliding_ladders) > 0 else None
 
 	def ladder_behind(self, rect):
+		# print('Checking for ladder behind %d,%d'%(rect.left, rect.top))
 		colliding_ladders = list(filter((lambda ladder: rect.colliderect(ladder.rect)), self.ladders.values()))
 
 		return colliding_ladders[0] if len(colliding_ladders) > 0 else None

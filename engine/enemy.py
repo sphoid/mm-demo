@@ -703,10 +703,11 @@ class Flea(Enemy):
 
 		self.jump_speed = 9
 		self.jumping = False
-		self.compressing = False
+		self.compressed = False
+		self.gravity = True
 
 	def get_default_move_x_speed(self):
-		return 5
+		return 3
 
 	def get_default_hit_points(self):
 		return 1
@@ -714,11 +715,33 @@ class Flea(Enemy):
 	def get_default_damage(self):
 		return 4
 
+	def collide_bottom(self, y):
+		super().collide_bottom(y)
+
+		self.compressed = True
+
 	def jump(self):
 		self.jumping = True
+		self.compressed = False
+		self.accelerate(self.move_speed_x, -self.jump_speed)
+
+	def react(self, delta):
+		if not self.jumping:
+			player = self.player
+			p = player.get_position()
+			x, y = self.position.x, self.position.y
+
+			if p.x < x:
+				self.direction = 0
+			elif p.x > x:
+				self.direction = 1
+
+			self.jump()
 
 	def update(self):
-		pass
+		if not self.falling:
+			self.accelerate(0, -self.jump_speed)
+			self.falling = False
 
 
 class BlueFlea(Flea):

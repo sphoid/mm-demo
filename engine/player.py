@@ -57,6 +57,8 @@ class Player(Entity):
 		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
 		image_at = self.spritesheet.image_at
 
+		# TODO: Add halo when getting damaged
+
 		self.animations = dict(
 			still_left=Animation([
 				dict(duration=2, image=image_at(Rect((0, 8), (24, 24)), -1)),
@@ -185,11 +187,11 @@ class Player(Entity):
 			self.climbing = False
 			self.climbing_over = False
 			self.reset_animation = True
-			self.sounds.play_sound('land')
 		else:
 			self.falling = False
 			self.reset_animation = True
-			self.sounds.play_sound('land')
+
+		self.sounds.play_sound('land')
 
 	def move_right(self):
 		self.direction = 1
@@ -211,22 +213,28 @@ class Player(Entity):
 	def is_climbing_over(self):
 		return self.climbing_over
 
+	def is_warping(self):
+		return self.warping
+
+	def warp(self, start_position):
+		self.position = copy.copy(start_position)
+		self.warping = True
+		self.falling = True
+		self.gravity = True
+
 	def grab_ladder(self, ladder, going_down=False):
 		self.velocity.x = 0
 		self.velocity.y = 0
 		self.position.x = ladder.get_left() + int(ladder.get_width() / 2)
+		print('ladder left=%d player=%d,%d'%(ladder.get_left(), self.position.x, self.position.y))
 		if going_down:
 			self.rect.width = 16
 			self.position.y += int(self.rect.height / 2)
+			print("Going down")
+
 		self.climbing = True
 		self.gravity = False
 		self.falling = False
-		self.reset_animation = True
-
-	def release_ladder(self):
-		self.climbing = False
-		self.gravity = True
-		self.falling = True
 		self.reset_animation = True
 
 	def climb_over(self):
@@ -247,21 +255,19 @@ class Player(Entity):
 		self.reset_animation = True
 
 	def climb_up(self):
-		self.accelerate(0, -self.climb_speed)
+		if self.climbing:
+			self.accelerate(0, -self.climb_speed)
 
 	def climb_down(self):
-		self.accelerate(0, self.climb_speed)
+		if self.climbing:
+			self.accelerate(0, self.climb_speed)
 
 	def stop_climbing(self):
 		self.velocity.y = 0
 		self.reset_animation = True
 
-	def warp(self, start_position):
-		self.set_position(start_position.x, start_position.y)
-		self.warping = True
-		self.gravity = True
-
-		print('Warping start=%d,%d'%(self.position.x, self.position.y))
+	def is_arriving(self):
+		return self.arriving
 
 	def arrive(self, y):
 		self.velocity.y = 0
@@ -272,17 +278,22 @@ class Player(Entity):
 		self.reset_animation = True
 		self.sounds.play_sound('warp')
 
-	def is_arriving(self):
-		return self.arriving
-
-	def stop_arriving(self):
+	def stop_arrive(self):
 		self.arriving = False
+		self.reset_animation = True
+
+
+	def release_ladder(self):
+		self.climbing = False
+		self.gravity = True
+		self.falling = True
 		self.reset_animation = True
 
 	def jump(self):
 		if self.climbing:
 			self.release_ladder()
 		elif not self.falling:
+			self.gravity = True
 			self.rect.width = 16
 			self.accelerate(0, -self.jump_speed)
 			self.falling = True
@@ -325,9 +336,6 @@ class Player(Entity):
 		self.shooting = False
 		self.reset_animation = True
 
-	def get_map_offset(self):
-		return self.stage.get_scroll_offset_x()
-
 	def update_status(self, delta):
 		if self.arriving:
 			self.arrive_time += delta
@@ -337,19 +345,11 @@ class Player(Entity):
 
 		if self.damaged:
 			self.damage_time += delta
+			# TODO: Replace timer with animation frame callback
 			if self.damage_time >= 0.2:
 				self.damaged = False
 				self.stop_x()
 				self.reset_animation = True
-
-		# if self.hit_points <= 0:
-		# 	self.die()
-
-	def set_view(self, view):
-		self.view = view
-
-	def get_view(self):
-		return self.view
 
 	def update(self, delta):
 		if self.dead:
@@ -409,3 +409,6 @@ class Player(Entity):
 		p = self.position
 		offset = self.view.get_offset()
 		self.rect.center = p.x - offset.x, p.y - offset.y
+
+		v = self.velocity
+		# print('player pos=%d,%d velocity=%d,%d'%(p.x, p.y, v.x, v.y))

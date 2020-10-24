@@ -1,31 +1,35 @@
 from pygame import sprite
 from pygame.sprite import Rect
 from pygame.math import Vector2
+import copy
 
 class Entity(sprite.Sprite):
-	def __init__(self):
+	def __init__(self, view=None):
 		super().__init__()
 
 		self.position = Vector2(0, 0)
 		self.velocity = Vector2(0, 0)
+		self.view = view
 
 		self.gravity = False
 		self.falling = False
-		self.warping = False
 
 		self.reset_animation = False
 
 	def is_gravity_enabled(self):
 		return self.gravity
 
-	def is_warping(self):
-		return self.warping
-
 	def is_falling(self):
 		return self.falling
 
 	def fall(self):
 		self.falling = True
+
+	def set_view(self, view):
+		self.view = view
+
+	def get_view(self):
+		return self.view
 
 	def get_position(self):
 		return self.position
@@ -35,16 +39,16 @@ class Entity(sprite.Sprite):
 		self.position.y = position[1]
 
 	def get_bottom(self):
-		return int(self.position.y + int(self.rect.height / 2))
+		return int(self.position.y + int(self.get_height() / 2))
 
 	def get_top(self):
-		return int(self.position.y - int(self.rect.height / 2))
+		return int(self.position.y - int(self.get_height() / 2))
 
 	def get_left(self):
-		return int(self.position.x - int(self.rect.width / 2))
+		return int(self.position.x - int(self.get_width() / 2))
 
 	def get_right(self):
-		return int(self.position.x + int(self.rect.width / 2))
+		return int(self.position.x + int(self.get_width() / 2))
 
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
@@ -77,32 +81,38 @@ class Entity(sprite.Sprite):
 		self.velocity.y = v
 
 	def stop_x(self):
-		self.set_velocity_x(0)
+		self.velocity.x = 0
+		self.reset_animation = True
 
 	def stop_y(self):
-		self.set_velocity_y(0)
+		self.velocity.y = 0
+		self.reset_animation = True
 
 	def collide_bottom(self, y):
+		print('collide_bottom %d'%y)
 		self.velocity.y = 0
-		self.position.y = int(y - int(self.rect.height / 2))
+		self.position.y = int(y - int(self.get_height() / 2))
 		self.falling = False
 		self.reset_animation = True
 
 	def collide_top(self, y):
+		print('collide_top %d'%y)
 		self.velocity.y = 0
-		self.position.y = int(y + int(self.rect.height / 2))
+		self.position.y = int(y + int(self.get_height() / 2))
 		self.falling = True
 
 	def collide_right(self, x):
+		print('collide_right %d'%x)
 		if self.velocity.x > 0:
 			self.velocity.x = 0
-		self.position.x = int(x - int(self.rect.width / 2))
+		self.position.x = int(x - int(self.get_width() / 2))
 		self.reset_animation = True
 
 	def collide_left(self, x):
+		print('collide_left %d'%x)
 		if self.velocity.x < 0:
 			self.velocity.x = 0
-		self.position.x = int(x + int(self.rect.width / 2))
+		self.position.x = int(x + int(self.get_width() / 2))
 		self.reset_animation = True
 
 	def fall(self):
@@ -112,6 +122,6 @@ class Entity(sprite.Sprite):
 		return self.get_rect().colliderect(rect)
 
 	def update_position(self, delta):
-		v = self.get_velocity()
+		v = self.velocity
 		self.position.x += v.x
 		self.position.y += v.y
