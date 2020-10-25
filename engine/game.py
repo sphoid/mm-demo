@@ -67,52 +67,95 @@ class Game:
 				pleft, pright, ptop, pbottom, pwidth, pheight = platform.get_left(), platform.get_right(), platform.get_top(), platform.get_bottom(), platform.get_width(), platform.get_height()
 				left, right, top, bottom = entity.get_left(), entity.get_right(), entity.get_top(), entity.get_bottom()
 
-				if v.y > 0 and v.x == 0 and ptop < bottom :
+				if v.y > 0 and bottom > ptop and ptop - bottom < entity.get_height() / 2:
+					print('entity collide bottom @ pos=%d,%d right=%d'%(p.x, p.y, right))
 					entity.collide_bottom(ptop)
+
+					self.check_collision(entity)
+
 					collided = True
-				elif v.y < 0 and v.x == 0 and pbottom > top:
+
+				elif v.y < 0 and top < pbottom and pbottom - top < entity.get_height() / 2:
 					entity.collide_top(pbottom)
+
+					self.check_collision(entity)
+
 					collided = True
-				elif v.x > 0 and v.y == 0 and pleft < right and bottom > ptop:
-					entity.collide_right(pleft)
-					collided = True
-				elif v.x < 0 and v.y == 0 and pright > left and bottom > ptop:
+
+				elif left < pright and pright - left < entity.get_width() / 2:
 					entity.collide_left(pright)
+
+					self.check_collision(entity)
+
 					collided = True
-				elif v.x > 0 and v.y > 0:
-					if p.x >= pleft and p.x <= pright and ptop < bottom:
-						entity.collide_bottom(ptop)
-						collided = True
-					elif left < pright and p.x > pright:
-						entity.collide_left(pright)
-						collided = True
-					elif right > pleft and right < pright:
-						entity.collide_right(pleft)
-						collided = True
-				elif v.x > 0 and v.y < 0:
-					if p.x >= pleft and p.x <= pright and pbottom > top:
-						entity.collide_top(pbottom)
-						collided = True
-					elif right > pleft and right < pright:
-						entity.collide_right(pleft)
-						collided = True
-				elif v.x < 0 and v.y > 0:
-					if p.x >= pleft and p.x <= pright and ptop < bottom:
-						entity.collide_bottom(ptop)
-						collided = True
-					elif right > pleft and p.x < pleft:
-						entity.collide_right(pleft)
-						collided = True
-					elif left < pright and left > pleft:
-						entity.collide_left(pright)
-						collided = True
-				elif v.x < 0 and v.y < 0:
-					if right >= pleft and left <= pright and pbottom > top:
-						entity.collide_top(pbottom)
-						collided = True
-					elif left < pright and left > pleft:
-						entity.collide_left(pright)
-						collided = True
+
+				elif right > pleft and right - pleft < entity.get_width() / 2:
+					print('entity collide @ right pos=%d,%d right=%d'%(p.x, p.y, right))
+					entity.collide_right(pleft)
+					print('entity after pos=%d,%d right=%d'%(entity.get_position().x, entity.get_position().y, entity.get_right()))
+
+					self.check_collision(entity)
+
+					collided = True
+
+				# if v.y > 0 and v.x == 0 and ptop < bottom :
+				# 	entity.collide_bottom(ptop)
+
+				# 	if left < pright and pright - left < entity.get_width() / 2:
+				# 		entity.collide_left(pright)
+				# 	elif right > pleft and right - pleft < entity.get_width() / 2:
+				# 		entity.collide_right(pleft)
+
+				# 	collided = True
+				# elif v.y < 0 and v.x == 0 and pbottom > top:
+				# 	entity.collide_top(pbottom)
+
+				# 	if left < pright and pright - left < entity.get_width() / 2:
+				# 		entity.collide_left(pright)
+				# 	elif right > pleft and right - pleft < entity.get_width() / 2:
+				# 		entity.collide_right(pleft)
+
+				# 	collided = True
+				# elif v.x > 0 and v.y == 0 and pleft < right and bottom > ptop:
+				# 	entity.collide_right(pleft)
+				# 	collided = True
+				# elif v.x < 0 and v.y == 0 and pright > left and bottom > ptop:
+				# 	entity.collide_left(pright)
+				# 	collided = True
+				# elif v.x > 0 and v.y > 0:
+				# 	if p.x >= pleft and p.x <= pright and ptop < bottom:
+				# 		entity.collide_bottom(ptop)
+				# 		collided = True
+				# 	elif left < pright and p.x > pright:
+				# 		entity.collide_left(pright)
+				# 		collided = True
+				# 	elif right > pleft and right < pright:
+				# 		entity.collide_right(pleft)
+				# 		collided = True
+				# elif v.x > 0 and v.y < 0:
+				# 	if p.x >= pleft and p.x <= pright and pbottom > top:
+				# 		entity.collide_top(pbottom)
+				# 		collided = True
+				# 	elif right > pleft and right < pright:
+				# 		entity.collide_right(pleft)
+				# 		collided = True
+				# elif v.x < 0 and v.y > 0:
+				# 	if p.x >= pleft and p.x <= pright and ptop < bottom:
+				# 		entity.collide_bottom(ptop)
+				# 		collided = True
+				# 	elif right > pleft and p.x < pleft:
+				# 		entity.collide_right(pleft)
+				# 		collided = True
+				# 	elif left < pright and left > pleft:
+				# 		entity.collide_left(pright)
+				# 		collided = True
+				# elif v.x < 0 and v.y < 0:
+				# 	if right >= pleft and left <= pright and pbottom > top:
+				# 		entity.collide_top(pbottom)
+				# 		collided = True
+				# 	elif left < pright and left > pleft:
+				# 		entity.collide_left(pright)
+				# 		collided = True
 		elif entity.is_gravity_enabled() and len(colliding_ladders) > 0:
 			for ladder in colliding_ladders:
 				if v.y > 0 and ladder.get_top() < entity.get_bottom() and (entity.get_bottom() - ladder.get_top()) < PLAYER_HALF_HEIGHT:

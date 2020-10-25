@@ -1,4 +1,4 @@
-import math
+import math, random
 from pygame import sprite, time
 from pygame.sprite import Rect
 from pygame.math import Vector2
@@ -590,6 +590,8 @@ class Cutter(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
 
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
+
 		if self.direction:
 			self.angle = 45
 		else:
@@ -597,8 +599,6 @@ class Cutter(Enemy):
 
 		self.jumping = False
 		self.move_time = 0
-
-		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 
 	def get_default_clip(self):
 		return True
@@ -1064,7 +1064,8 @@ class Mambu(Enemy):
 
 class BigEye(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
-		self.jump_speed = 4
+		self.normal_jump_speed = 4
+		self.high_jump_speed = 8
 		self.jumping = False
 		self.compressed = False
 
@@ -1092,6 +1093,10 @@ class BigEye(Enemy):
 
 		super().collide_bottom(y)
 
+	def get_jump_speed(self):
+		num = random.randint(1, 3)
+		return self.high_jump_speed if num == 3 else self.normal_jump_speed
+
 	def jump(self):
 		self.jumping = True
 		self.compressed = False
@@ -1102,7 +1107,7 @@ class BigEye(Enemy):
 		elif self.direction == 0:
 			x_speed = 0 if self.stage.platform_left_adjacent(rect) else -self.move_speed_x
 
-		self.accelerate(x_speed, -self.jump_speed)
+		self.accelerate(x_speed, -self.get_jump_speed())
 
 	def react(self, delta):
 		player = self.player
@@ -1120,7 +1125,10 @@ class BigEye(Enemy):
 		if self.dead:
 			self.enemies.kill(self)
 		else:
-			animation = self.animations['compressed'] if self.compressed else self.animations['uncompressed']
+			if self.compressed:
+				animation = self.animations['compressed_right'] if self.direction == 1 else self.animations['compressed_left']
+			else:
+				animation = self.animations['uncompressed_right'] if self.direction == 1 else self.animations['uncompressed_left']
 
 			if self.reset_animation:
 				animation.reset()
@@ -1144,16 +1152,23 @@ class RedBigEye(BigEye):
 		image_at = self.spritesheet.image_at
 
 		self.animations = dict(
-			compressed=Animation([
+			compressed_left=Animation([
 				dict(duration=0.75, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1)),
 				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1), callback=self.jump),
 			]),
-			uncompressed=Animation([
+			compressed_right=Animation([
+				dict(duration=0.75, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip=True)),
+				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip=True), callback=self.jump),
+			]),
+			uncompressed_left=Animation([
 				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1)),
+			]),
+			uncompressed_right=Animation([
+				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1, flip=True)),
 			]),
 		)
 
-		start_frame = self.animations['uncompressed'].current()
+		start_frame = self.animations['uncompressed_right'].current() if self.direction == 1 else self.animations['uncompressed_left'].current()
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 

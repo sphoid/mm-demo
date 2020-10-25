@@ -136,12 +136,12 @@ class Player(Entity):
 				dict(duration=0.05, image=image_at(Rect((705, 0), (24, 32)), -1), callback=self.stop_arrive)
 			]),
 			damaged_left=Animation([
-				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1)),
-				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1), callback=self.recover)
+				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1)),
+				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1), callback=self.recover)
 			]),
 			damaged_right=Animation([
-				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True)),
-				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True), callback=self.recover)
+				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True)),
+				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True), callback=self.recover)
 			])
 		)
 
@@ -332,7 +332,7 @@ class Player(Entity):
 		self.hit_points -= damage
 		self.stop_x()
 
-		if self.hit_points < 0:
+		if self.hit_points <= 0:
 			self.die()
 		else:
 			if self.climbing:
@@ -346,6 +346,8 @@ class Player(Entity):
 			self.reset_animation = True
 
 			self.sounds.play_sound('damage')
+
+		print('hit_points=%d'%self.hit_points)
 
 	def is_invincible(self):
 		return self.invincible
