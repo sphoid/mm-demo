@@ -18,17 +18,6 @@ class Pellet(sprite.Sprite):
 		self.view = view
 		self.velocity = velocity
 
-	# def calculate_velocity(self, target):
-	# 	dx = self.position.x - target[0]
-	# 	dy = self.position.y - target[1]
-
-	# 	dz = math.sqrt(dx**2 + dy**2)
-
-	# 	speedx = dx/dz * self.speed
-	# 	speedy = dy/dz * self.speed
-
-	# 	return Vector2(speedx, speedy)
-
 	def get_rect(self):
 		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
 
@@ -71,13 +60,14 @@ class Pellet(sprite.Sprite):
 		self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
 
 class Enemy(Entity):
-	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		super().__init__()
 		self.name = name
 		self.spritesheet = spritesheet
 		self.enemies = enemies
 		self.view = view
 		self.player = player
+		self.stage = stage
 
 		if 'clip' in attributes:
 			self.clip = attributes['clip']
@@ -228,15 +218,17 @@ class Enemy(Entity):
 
 
 class Heli(Enemy):
-	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, view, sounds, enemies, player, *position, **attributes)
+
 		self.swooping = False
 		self.swoop_direction = 0
 		self.swoop_target_y = 0
 		self.swoop_original_y = 0
 		self.swoop_cooling_down = False
 		self.swoop_cooldown_time = 0
+
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes)
 
 	def get_default_clip(self):
 		return True
@@ -387,8 +379,8 @@ class GreenHeli(Heli):
 
 
 class Blaster(Enemy):
-	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
-		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 		self.active = False
 		self.deactivating = False
 		self.shooting = False
@@ -595,9 +587,8 @@ class RedBlaster(Blaster):
 		self.rect = self.image.get_rect()
 
 class Cutter(Enemy):
-	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
 
 		if self.direction:
 			self.angle = 45
@@ -606,6 +597,8 @@ class Cutter(Enemy):
 
 		self.jumping = False
 		self.move_time = 0
+
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 
 	def get_default_clip(self):
 		return True
@@ -662,9 +655,7 @@ class Cutter(Enemy):
 	def update_position(self, delta):
 		if self.jumping:
 			self.jump_time += delta
-			# gravity = -9.8
 			time_diff = (self.jump_time - self.jump_start_time) * 7
-			# print('time_diff=%f'%time_diff)
 			if time_diff > 0:
 				half_gravity_time_squared = GRAVITY * (time_diff * time_diff) * 0.5
 				displacement_x = self.jump_velocity * math.sin(self.angle) * time_diff
@@ -699,13 +690,13 @@ class Cutter(Enemy):
 			self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
 
 class Flea(Enemy):
-	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		self.jump_speed = 8
 		self.jumping = False
 		self.compressed = False
 
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 
 	def get_default_gravity(self):
 		return True
@@ -810,7 +801,7 @@ class RedFlea(Flea):
 		self.rect = self.image.get_rect()
 
 class OctoBattery(Enemy):
-	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		self.transitioning = False
 		self.open = False
 		self.opening = False
@@ -821,7 +812,7 @@ class OctoBattery(Enemy):
 		else:
 			self.axis = self.get_default_axis()
 
-		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 
 	def get_default_axis(self):
 		return 'x'
@@ -985,12 +976,10 @@ class OrangeOctoBattery(OctoBattery):
 		self.rect = self.image.get_rect()
 
 class Mambu(Enemy):
-	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
-		# self.moving = True
-		# self.shooting = False
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		self.pellet_speed = 1
 
-		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 
 	def get_default_clip(self):
 		return True
@@ -1017,15 +1006,6 @@ class Mambu(Enemy):
 				dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.shoot),
 				dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.move),
 			])
-			# moving=Animation([
-			# 	dict(duration=1, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1)),
-			# 	dict(duration=0.5, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1), callback=self.stop),
-			# 	dict(duration=0.5, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1), callback=self.shoot),
-			# ]),
-			# shooting=Animation([
-			# 	dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1)),
-			# 	dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.move),
-			# ]),
 		)
 
 		self.pellet_image = image_at(Rect((121, 96), (6, 6)), -1)
@@ -1035,16 +1015,9 @@ class Mambu(Enemy):
 		self.rect = self.image.get_rect()
 
 	def stop(self):
-		print('Mambu stop')
 		self.velocity.x = 0
-		# self.stop_x()
-		# self.moving = False
-		# self.shooting = True
-		# self.reset_animation = True
 
 	def shoot(self):
-		print('Mambu shoot')
-		# self.shooting = True
 		angles = [45, 90, 135, 180, 225, 270, 315, 360]
 		p = self.position
 		for angle in angles:
@@ -1055,12 +1028,8 @@ class Mambu(Enemy):
 		self.sounds.play_sound('eshoot')
 
 	def move(self):
-		print('Mambu move')
-		# if not self.moving:
-			# self.moving = True
 		vx = -self.move_speed_x if self.direction == 0 else self.move_speed_x
 		self.accelerate(vx, 0)
-		# self.reset_animation = True
 
 	def hit(self, pew):
 		if self.moving:
@@ -1075,10 +1044,6 @@ class Mambu(Enemy):
 			self.enemies.kill(self)
 		else:
 			animation = self.animations['default']
-			# if self.moving:
-			# 	animation = self.animations['moving']
-			# else:
-			# 	animation = self.animations['shooting']
 
 			if self.reset_animation:
 				animation.reset()
@@ -1097,6 +1062,101 @@ class Mambu(Enemy):
 			offset = view.get_offset()
 			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
 
+class BigEye(Enemy):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
+		self.jump_speed = 4
+		self.jumping = False
+		self.compressed = False
+
+		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
+
+	def get_default_gravity(self):
+		return True
+
+	def get_default_moving(self):
+		return False
+
+	def get_default_move_x_speed(self):
+		return 2
+
+	def get_default_hit_points(self):
+		return 16
+
+	def get_default_damage(self):
+		return 14
+
+	def collide_bottom(self, y):
+		self.compressed = True
+		self.stop_x()
+
+		super().collide_bottom(y)
+
+	def jump(self):
+		self.jumping = True
+		self.compressed = False
+		rect = self.get_rect()
+
+		if self.direction == 1:
+			x_speed = 0 if self.stage.platform_right_adjacent(rect) else self.move_speed_x
+		elif self.direction == 0:
+			x_speed = 0 if self.stage.platform_left_adjacent(rect) else -self.move_speed_x
+
+		self.accelerate(x_speed, -self.jump_speed)
+
+	def react(self, delta):
+		player = self.player
+		p = player.get_position()
+		x, y = self.position.x, self.position.y
+
+		if p.x < x:
+			self.direction = 0
+		elif p.x > x:
+			self.direction = 1
+
+	def update(self, delta):
+		super().update(delta)
+
+		if self.dead:
+			self.enemies.kill(self)
+		else:
+			animation = self.animations['compressed'] if self.compressed else self.animations['uncompressed']
+
+			if self.reset_animation:
+				animation.reset()
+				self.reset_animation = False
+
+			self.current_time += delta
+			if self.current_time >= animation.next_time:
+				prev_center = self.rect.center
+				self.image = animation.next(0)['image']
+				self.rect.width = self.image.get_rect().width
+				self.rect.center = prev_center
+				self.current_time = 0
+
+			p = self.position
+			view = self.view
+			offset = view.get_offset()
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
+
+class RedBigEye(BigEye):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			compressed=Animation([
+				dict(duration=0.75, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1), callback=self.jump),
+			]),
+			uncompressed=Animation([
+				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1)),
+			]),
+		)
+
+		start_frame = self.animations['uncompressed'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
 ENEMY_CLASS=dict(
 	blueheli = BlueHeli,
 	greenheli = GreenHeli,
@@ -1109,16 +1169,18 @@ ENEMY_CLASS=dict(
 	redoctobattery = RedOctoBattery,
 	orangeoctobattery = OrangeOctoBattery,
 	mambu = Mambu,
+	redbigeye = RedBigEye,
 )
 
 class Enemies:
-	def __init__(self, spritesheet_loader, sounds, view, explosions):
+	def __init__(self, spritesheet_loader, sounds, view, stage, explosions):
 		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
 		self.view = view
 		self.sounds = sounds
 		self.spawn_range = 50
 		self.enemies = dict()
 		self.explosions = explosions
+		self.stage = stage
 		self.enemy_sprite_group = sprite.Group()
 		self.pew_sprite_group = sprite.Group()
 
@@ -1134,8 +1196,6 @@ class Enemies:
 		offset = view.get_offset()
 
 		zenemies = list(filter((lambda name: 'zone' in self.enemies[name]['attributes'] and self.enemies[name]['attributes']['zone'] == zone.get_name()), self.enemies.keys()))
-
-		# print('spawn_nearby zone=%s zoned=%r'%(zone.get_name(), zoned))
 
 		enemies = list()
 		for name in zenemies:
@@ -1166,7 +1226,7 @@ class Enemies:
 			print('ERROR: Unknown enemy type %s'%type)
 			return None
 
-		enemy = enemy_class(name, self.spritesheet, self.view, self.sounds, self, player, start_position[0], start_position[1], **attributes)
+		enemy = enemy_class(name, self.spritesheet, self.view, self.sounds, self, player, self.stage, start_position[0], start_position[1], **attributes)
 
 		self.enemy_sprite_group.add(enemy)
 
@@ -1207,6 +1267,10 @@ class Enemies:
 		for enemy in self.enemy_sprite_group:
 			if self.view.out_of_range(enemy.get_rect(), int(self.view.get_width() / 2)):
 				self.kill(enemy)
+
+		for pew in self.pew_sprite_group:
+			if not self.view.in_view(pew.get_rect()):
+				pew.kill()
 
 	def update(self, delta):
 		self.update_pew_positions()

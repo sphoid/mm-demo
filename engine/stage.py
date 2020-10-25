@@ -91,7 +91,7 @@ class Stage:
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.hazards[x, y] = Hazards.load(obj.type, Rect((x, y), (width, height)))
 
-		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self.explosions)
+		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self, self.explosions)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y = int(obj.x), int(obj.y)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
@@ -142,6 +142,18 @@ class Stage:
 		elif len(colliding_zones) > 1:
 			next_zone = list(filter((lambda zone: zone.get_name() != self.zone.get_name()), colliding_zones))[0]
 			return next_zone
+
+	def platform_left_adjacent(self, rect):
+		test_rect = Rect((rect.left - 1, rect.top), (rect.width, rect.height))
+		colliding_platforms = list(filter((lambda platform: test_rect.colliderect(platform.rect)), self.platforms.values()))
+
+		return colliding_platforms[0] if len(colliding_platforms) > 0 else None
+
+	def platform_right_adjacent(self, rect):
+		test_rect = Rect((rect.right + 1, rect.top), (rect.width, rect.height))
+		colliding_platforms = list(filter((lambda platform: test_rect.colliderect(platform.rect)), self.platforms.values()))
+
+		return colliding_platforms[0] if len(colliding_platforms) > 0 else None
 
 	def platform_below(self, rect):
 		test_rect = Rect((rect.left, rect.top + 1), (rect.width, rect.height))

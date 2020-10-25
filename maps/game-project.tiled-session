@@ -90,7 +90,7 @@
         "cutman.tmx"
     ],
     "project": "game-project.tiled-project",
-    "property.type": "bool",
+    "property.type": "string",
     "recentFiles": [
         "tiles-1.tsx",
         "tiles-2.tsx",
