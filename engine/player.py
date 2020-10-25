@@ -19,9 +19,6 @@ class Player(Entity):
 		self.stage = None
 		self.explosions = explosions
 
-		self.damage_time = 0
-		self.arrive_time = 0
-
 		self.max_height = 48
 		self.max_width = 48
 
@@ -29,7 +26,6 @@ class Player(Entity):
 		self.position = Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
 		self.view = view
 
-		self.current_time = 0
 		self.direction = 1
 		self.gravity = True
 		self.falling = False
@@ -37,16 +33,21 @@ class Player(Entity):
 		self.arriving = False
 		self.climbing = False
 		self.climbing_over = False
-		self.climb_hand_side = 1
 		self.dead = False
 		self.shooting = False
 		self.damaged = False
+		self.healing = False
+		self.healing_left = 0
+		self.invincible = False
+
+		self.current_time = 0
+		self.invincible_time = 0
+		self.heal_time = 0
 
 		self.weapon = Weapon(self.spritesheet_loader, self.sounds, self)
 
 		self.reset_animation = False
 
-		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
 		self.map_size = None
 
 		self.load_sprites()
@@ -131,13 +132,15 @@ class Player(Entity):
 			]),
 			warp_arrive=Animation([
 				dict(duration=0.05, image=image_at(Rect((680, 0), (24, 32)), -1)),
-				dict(duration=0.05, image=image_at(Rect((705, 0), (24, 32)), -1))
+				dict(duration=0.05, image=image_at(Rect((705, 0), (24, 32)), -1), callback=self.stop_arrive)
 			]),
 			damaged_left=Animation([
-				dict(duration=1, image=image_at(Rect((258, 0), (32, 32)), -1))
+				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1)),
+				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1), callback=self.recover)
 			]),
 			damaged_right=Animation([
-				dict(duration=1, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True))
+				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True)),
+				dict(duration=0.5, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True), callback=self.recover)
 			])
 		)
 
@@ -170,6 +173,14 @@ class Player(Entity):
 
 	def get_hit_points(self):
 		return self.hit_points
+
+	def heal(self, hit_points):
+		if self.hit_points < self.max_hit_points:
+			self.healing = True
+			self.healing_left = hit_points
+
+			self.sounds.play_sound('energy', True)
+
 
 	def get_width(self):
 		return 16
@@ -282,7 +293,6 @@ class Player(Entity):
 		self.arriving = False
 		self.reset_animation = True
 
-
 	def release_ladder(self):
 		self.climbing = False
 		self.gravity = True
@@ -304,7 +314,14 @@ class Player(Entity):
 
 		return self.weapon.shoot()
 
-	def damage(self, damage, force=2):
+	def recover(self):
+		self.damaged = False
+		self.invincible = True
+		self.invincible_time = 0
+		self.stop_x()
+
+	def damage(self, damage, force=1):
+		self.damaged = True
 		self.hit_points -= damage
 		self.stop_x()
 
@@ -319,11 +336,12 @@ class Player(Entity):
 			else:
 				self.accelerate(force, 0)
 
-			self.damage_time = 0
-			self.damaged = True
 			self.reset_animation = True
 
 			self.sounds.play_sound('damage')
+
+	def is_invincible(self):
+		return self.invincible
 
 	def is_damaged(self):
 		return self.damaged
@@ -337,19 +355,25 @@ class Player(Entity):
 		self.reset_animation = True
 
 	def update_status(self, delta):
-		if self.arriving:
-			self.arrive_time += delta
-			if self.arrive_time >= 0.05:
-				self.arriving = False
-				self.reset_animation = True
+		if self.invincible:
+			self.invincible_time += delta
+			if self.invincible_time >= 1:
+				self.invincible = False
 
-		if self.damaged:
-			self.damage_time += delta
-			# TODO: Replace timer with animation frame callback
-			if self.damage_time >= 0.2:
-				self.damaged = False
-				self.stop_x()
-				self.reset_animation = True
+		if self.healing:
+			self.heal_time += delta
+			if self.heal_time >= 0.05:
+				self.heal_time = 0
+
+				self.hit_points += 1
+				self.healing_left -= 1
+
+				if self.hit_points > self.max_hit_points:
+					self.hit_points = self.max_hit_points
+
+				if self.healing_left == 0:
+					self.healing = False
+
 
 	def update(self, delta):
 		self.update_position(delta)

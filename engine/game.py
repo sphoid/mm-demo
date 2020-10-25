@@ -157,12 +157,17 @@ class Game:
 				print('collide zone right boundary px=%d offsetx=%d vw=%d'%(player.get_right(), offset.x, view.get_width()))
 				player.collide_right(offset.x + zw)
 
-		if not player.is_damaged():
+		if not player.is_damaged() and not player.is_invincible():
 			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.get_enemies().get_enemies()))
 			if len(colliding_enemies) > 0:
 				enemy = colliding_enemies[0]
 				print('enemy hit epos=%d,%d ppos=%d, %d'%(enemy.get_position().x, enemy.get_position().y, player.get_position().x, player.get_position().y))
 				player.damage(enemy.get_damage())
+
+		collided_items = list(filter((lambda item: item.collides_with(player.get_rect())), stage.get_items().get_items()))
+		for item in collided_items:
+			print('using item %r'%item)
+			item.use(player)
 
 	def check_player_off_map(self):
 		stage = self.stage
@@ -348,6 +353,12 @@ class Game:
 
 		enemies.update(delta)
 
+	def update_items(self, delta):
+		stage = self.stage
+		items = stage.get_items()
+
+		items.update(delta)
+
 	def update_player(self, delta):
 		player = self.player
 
@@ -374,6 +385,7 @@ class Game:
 		else:
 			self.update_player(delta)
 			self.update_enemies(delta)
+			self.update_items(delta)
 			self.check_weapon_hits()
 
 			self.update_zone()
@@ -394,7 +406,8 @@ class Game:
 		sprites = self.sprites
 		screen = self.screen
 		stage = self.stage
-		enemies = self.stage.get_enemies()
+		enemies = stage.get_enemies()
+		items = stage.get_items()
 		hud = self.hud
 		view = self.view
 
@@ -404,6 +417,7 @@ class Game:
 
 		stage.draw(buffer)
 		enemies.draw(buffer)
+		items.draw(buffer)
 
 		if self.debug['player_debug']:
 			player = self.player

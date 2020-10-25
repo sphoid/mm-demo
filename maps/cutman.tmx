@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="12" nextobjectid="253">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="13" nextobjectid="254">
  <properties>
   <property name="Music Track" value="cutman-stage"/>
   <property name="Start Zone" value="z1"/>
  </properties>
  <tileset firstgid="1" source="cutman-tileset.tsx"/>
- <layer id="1" name="tiles" width="143" height="145">
+ <layer id="1" name="tiles" width="143" height="145" visible="0">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -168,6 +168,9 @@
   <object id="173" name="z11" type="zone" x="1776" y="528" width="256" height="256"/>
   <object id="196" name="z12" type="zone" x="1776" y="784" width="496" height="256"/>
  </objectgroup>
+ <objectgroup id="12" name="items">
+  <object id="253" name="bh1" type="bighealth" x="1824" y="208" width="16" height="16"/>
+ </objectgroup>
  <objectgroup id="7" name="player">
   <object id="40" type="start" x="16" y="2048" width="16" height="16"/>
   <object id="41" type="land" x="16" y="2272" width="16" height="16"/>
@@ -275,7 +278,7 @@
   <object id="144" type="platform" x="1984" y="224" width="16" height="64"/>
   <object id="146" type="platform" x="1296" y="384" width="32" height="16"/>
   <object id="147" type="platform" x="1360" y="416" width="32" height="32"/>
-  <object id="149" type="platform" x="1792" y="175" width="16" height="224"/>
+  <object id="149" type="platform" x="1792" y="176" width="16" height="223"/>
   <object id="150" type="platform" x="1808" y="224" width="16" height="176"/>
   <object id="151" type="platform" x="1824" y="224" width="16" height="144"/>
   <object id="152" type="platform" x="1840" y="224" width="16" height="80"/>

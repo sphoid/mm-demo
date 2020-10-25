@@ -7,6 +7,7 @@ from .util import *
 from .object import *
 from .tile import *
 from .enemy import *
+from .item import *
 from .hazards import Hazards
 
 class Stage:
@@ -24,8 +25,10 @@ class Stage:
 		self.ladders = {}
 		self.platforms = {}
 		self.hazards = {}
+		self.items = {}
 		self.tile_sprite_group = sprite.Group()
 		self.enemies = None
+		self.items = None
 		self.explosions = explosions
 		self.enemy_sprite_group = sprite.Group()
 		self.scroll_offset_x = 0
@@ -49,6 +52,7 @@ class Stage:
 		self.map = self.loader.load_map('cutman.tmx')
 		self.music_track = self.map.properties['Music Track']
 		self.start_zone = self.map.properties['Start Zone']
+		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
 		map_debug = self.debug['map_debug']
 
@@ -78,12 +82,10 @@ class Stage:
 		for obj in self.map.get_layer_by_name('platforms'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.platforms[x, y] = GameObject(Rect((x, y), (width, height)))
-			# print('LOAD: Platform %d,%d %dx%d'%(x, y, width, height))
 
 		for obj in self.map.get_layer_by_name('ladders'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.ladders[x, y] = GameObject(Rect((x, y), (width, height)))
-			# print('LOAD: Ladder %d,%d %dx%d'%(x, y, width, height))
 
 		for obj in self.map.get_layer_by_name('hazards'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
@@ -91,19 +93,22 @@ class Stage:
 
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self.explosions)
 		for obj in self.map.get_layer_by_name('enemies'):
-			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
+			x, y = int(obj.x), int(obj.y)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
-			print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y, width, height))
+			# print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y))
 
 		for obj in self.map.get_layer_by_name('player'):
-			x, y, width, height, type = int(obj.x), int(obj.y), int(obj.width), int(obj.height), obj.type
+			x, y = int(obj.x), int(obj.y)
 			if obj.type == 'start':
 				self.warp_start_position = Vector2(x, y)
 			elif obj.type == 'land':
 				self.warp_land_position = Vector2(x, y)
 
-		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
-
+		self.items = Items(self.spritesheet_loader, self.sounds, self.view)
+		for obj in self.map.get_layer_by_name('items'):
+			x, y = int(obj.x), int(obj.y)
+			self.items.load(obj.type, x, y)
+			print("loaded item %s %d,%d"%(obj.type, x, y))
 
 		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
 
@@ -118,14 +123,6 @@ class Stage:
 
 	def get_music_track(self):
 		return self.music_track
-
-	def get_starting_zone(self):
-		if self.debug['start_zone']:
-			zone_name = self.debug['start_zone']
-		else:
-			zone_name = self.start_zone
-
-		return self.zones[zone_name]
 
 	def get_zone(self):
 		return self.zone
@@ -159,7 +156,6 @@ class Stage:
 		return colliding_ladders[0] if len(colliding_ladders) > 0 else None
 
 	def ladder_behind(self, rect):
-		# print('Checking for ladder behind %d,%d'%(rect.left, rect.top))
 		colliding_ladders = list(filter((lambda ladder: rect.colliderect(ladder.rect)), self.ladders.values()))
 
 		return colliding_ladders[0] if len(colliding_ladders) > 0 else None
@@ -185,20 +181,14 @@ class Stage:
 	def get_map_height(self):
 		return self.map_size[1]
 
-	def get_map_right(self):
-		return self.area.width - self.get_scroll_offset_x()
-
-	def get_scroll_offset_x(self):
-		return self.scroll_offset_x
-
-	def get_scroll_offset_y(self):
-		return self.scroll_offset_y
-
 	def get_view(self):
 		return self.view
 
 	def get_enemies(self):
 		return self.enemies
+
+	def get_items(self):
+		return self.items
 
 	def update(self, delta):
 		self.tile_sprite_group.update(delta)

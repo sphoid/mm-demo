@@ -1039,7 +1039,6 @@ ENEMY_CLASS=dict(
 class Enemies:
 	def __init__(self, spritesheet_loader, sounds, view, explosions):
 		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
-		# self.stage = stage
 		self.view = view
 		self.sounds = sounds
 		self.spawn_range = 50
@@ -1087,7 +1086,7 @@ class Enemies:
 		if type in ENEMY_CLASS:
 			enemy_class = ENEMY_CLASS[type]
 		else:
-			print('ERROR: UNknown enemy type %s'%type)
+			print('ERROR: Unknown enemy type %s'%type)
 			return None
 
 		enemy = enemy_class(name, self.spritesheet, self.view, self.sounds, self, player, start_position[0], start_position[1], **attributes)

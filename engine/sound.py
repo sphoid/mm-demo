@@ -19,6 +19,7 @@ class SoundLibrary:
 			edamage=load_sound('edamage.wav', self.mixer),
 			eshoot=load_sound('eshoot.wav', self.mixer),
 			dink=load_sound('dink.wav', self.mixer),
+			energy=load_sound('energyfill.wav', self.mixer),
 		)
 
 	def play_sound(self, sound, blocking=False, end_event=None):
