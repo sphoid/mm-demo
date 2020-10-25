@@ -10,7 +10,7 @@ from .enemy import *
 from .hazards import Hazards
 
 class Stage:
-	def __init__(self, config, loader, spritesheet_loader, sounds, explosions):
+	def __init__(self, config, loader, spritesheet_loader, view, sounds, explosions):
 		self.config = config
 		self.tile_height = 32
 		self.tile_width = 32
@@ -19,7 +19,6 @@ class Stage:
 		self.player = None
 		self.map = None
 		self.zone = None
-		self.zoned = False
 		self.tiles = {}
 		self.zones = {}
 		self.ladders = {}
@@ -37,15 +36,20 @@ class Stage:
 		self.sounds = sounds
 		self.music_track = None
 		self.start_zone = None
-		self.view = None
+		self.view = view
 
 		self.warp_start_position = Vector2(0, 0)
 		self.warp_land_position = Vector2(0, 0)
 
 		self.debug = self.config.get_debug()
 
+		self.load_map()
+
 	def load_map(self):
 		self.map = self.loader.load_map('cutman.tmx')
+		self.music_track = self.map.properties['Music Track']
+		self.start_zone = self.map.properties['Start Zone']
+
 		map_debug = self.debug['map_debug']
 
 		if not map_debug:
@@ -63,6 +67,14 @@ class Stage:
 			self.zones[obj.name] = GameObject(Rect((x, y), (width, height)), name=obj.name)
 			print('LOAD: Zone %d,%d %dx%d'%(x, y, width, height))
 
+		if self.debug['start_zone'] is not None:
+			zone_name = self.debug['start_zone']
+		else:
+			zone_name = self.start_zone
+
+		self.zone = self.zones[zone_name]
+		self.view.set_offset(self.zone.get_position())
+
 		for obj in self.map.get_layer_by_name('platforms'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.platforms[x, y] = GameObject(Rect((x, y), (width, height)))
@@ -77,7 +89,7 @@ class Stage:
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.hazards[x, y] = Hazards.load(obj.type, Rect((x, y), (width, height)))
 
-		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self, self.explosions)
+		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self.explosions)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
@@ -92,19 +104,8 @@ class Stage:
 
 		self.map_size = self.map.width * TILE_WIDTH, self.map.height * TILE_HEIGHT
 
-		self.music_track = self.map.properties['Music Track']
-		self.start_zone = self.map.properties['Start Zone']
 
 		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
-
-	def load(self):
-		self.load_map()
-
-		self.zone = self.get_starting_zone()
-		self.zoned = True
-		self.scroll_offset_y = self.zone.get_top()
-
-		# print("Zone offset %d,%d"%(self.scroll_offset_x, self.scroll_offset_y))
 
 	def get_platforms(self):
 		return self.platforms.values()
@@ -131,7 +132,6 @@ class Stage:
 
 	def set_zone(self, zone_name):
 		self.zone = self.zones[zone_name]
-		# self.zoned = True
 
 	def in_zone(self, player):
 		prect = player.get_rect()
@@ -193,11 +193,6 @@ class Stage:
 
 	def get_scroll_offset_y(self):
 		return self.scroll_offset_y
-
-	def set_view(self, view):
-		self.view = view
-
-		self.view.set_offset(self.zone.get_position())
 
 	def get_view(self):
 		return self.view

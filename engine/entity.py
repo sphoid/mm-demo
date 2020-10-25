@@ -13,8 +13,12 @@ class Entity(sprite.Sprite):
 
 		self.gravity = False
 		self.falling = False
+		self.clip = False
 
 		self.reset_animation = False
+
+	def is_clip_enabled(self):
+		return self.clip
 
 	def is_gravity_enabled(self):
 		return self.gravity
@@ -101,6 +105,7 @@ class Entity(sprite.Sprite):
 		self.velocity.y = 0
 		self.position.y = int(y + int(self.get_height() / 2))
 		self.falling = True
+		self.reset_animation = True
 
 	def collide_right(self, x):
 		print('collide_right %r x=%d'%(self, x))

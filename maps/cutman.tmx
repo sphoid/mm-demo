@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="12" nextobjectid="220">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="12" nextobjectid="253">
  <properties>
   <property name="Music Track" value="cutman-stage"/>
   <property name="Start Zone" value="z1"/>
@@ -331,16 +331,22 @@
   <object id="174" name="L24" type="ladder" x="1792" y="752" width="16" height="96"/>
  </objectgroup>
  <objectgroup id="5" name="enemies">
-  <object id="4" name="hc1" type="blueheli" x="384" y="2192" width="32" height="32">
+  <object id="4" name="bh1" type="blueheli" x="384" y="2208" width="16" height="16">
    <properties>
     <property name="direction" type="int" value="0"/>
     <property name="zone" value="z1"/>
    </properties>
   </object>
-  <object id="6" name="hc2" type="blueheli" x="512" y="2208" width="32" height="32">
+  <object id="6" name="bh2" type="blueheli" x="512" y="2208" width="16" height="16">
    <properties>
     <property name="direction" type="int" value="0"/>
     <property name="zone" value="z1"/>
+   </properties>
+  </object>
+  <object id="208" name="bh3" type="blueheli" x="576" y="2176" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z2"/>
    </properties>
   </object>
   <object id="204" name="ws1" type="redblaster" x="800" y="2128" width="16" height="16">
@@ -353,12 +359,6 @@
    <properties>
     <property name="direction" type="int" value="0"/>
     <property name="zone" value="z1"/>
-   </properties>
-  </object>
-  <object id="208" name="hc3" type="blueheli" x="576" y="2176" width="32" height="32">
-   <properties>
-    <property name="direction" type="int" value="0"/>
-    <property name="zone" value="z2"/>
    </properties>
   </object>
   <object id="209" name="ws3" type="redblaster" x="960" y="1968" width="16" height="16">
@@ -415,7 +415,137 @@
     <property name="zone" value="z4"/>
    </properties>
   </object>
-  <object id="218" name="snap1" type="cutter" x="896" y="1216" width="16" height="16">
+  <object id="219" name="bf1" type="blueflea" x="1056" y="1184" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z5"/>
+   </properties>
+  </object>
+  <object id="224" name="bf2" type="blueflea" x="1072" y="1152" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z5"/>
+   </properties>
+  </object>
+  <object id="226" name="bf3" type="blueflea" x="1104" y="1136" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z5"/>
+   </properties>
+  </object>
+  <object id="227" name="rob1" type="redoctobattery" x="1328" y="1216" width="16" height="16">
+   <properties>
+    <property name="axis" value="y"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z5"/>
+   </properties>
+  </object>
+  <object id="228" name="rob3" type="redoctobattery" x="1360" y="1152" width="16" height="16">
+   <properties>
+    <property name="axis" value="y"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z5"/>
+   </properties>
+  </object>
+  <object id="229" name="rob2" type="redoctobattery" x="1440" y="1184" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z5"/>
+   </properties>
+  </object>
+  <object id="231" name="rob4" type="redoctobattery" x="1344" y="928" width="16" height="16">
+   <properties>
+    <property name="axis" value="y"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z6"/>
+   </properties>
+  </object>
+  <object id="232" name="rob5" type="redoctobattery" x="1472" y="928" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z6"/>
+   </properties>
+  </object>
+  <object id="234" name="rob6" type="redoctobattery" x="1296" y="896" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z6"/>
+   </properties>
+  </object>
+  <object id="236" name="rob7" type="redoctobattery" x="1328" y="864" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z6"/>
+   </properties>
+  </object>
+  <object id="237" name="rob8" type="redoctobattery" x="1392" y="720" width="16" height="16">
+   <properties>
+    <property name="axis" value="y"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z7"/>
+   </properties>
+  </object>
+  <object id="238" name="rob9" type="redoctobattery" x="1360" y="704" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z7"/>
+   </properties>
+  </object>
+  <object id="239" name="rob10" type="redoctobattery" x="1440" y="640" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z7"/>
+   </properties>
+  </object>
+  <object id="240" name="rob11" type="redoctobattery" x="1472" y="608" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z7"/>
+   </properties>
+  </object>
+  <object id="241" name="rob12" type="redoctobattery" x="1296" y="448" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z8"/>
+   </properties>
+  </object>
+  <object id="242" name="rob13" type="redoctobattery" x="1312" y="400" width="16" height="16">
+   <properties>
+    <property name="axis" value="y"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z8"/>
+   </properties>
+  </object>
+  <object id="243" name="rob14" type="redoctobattery" x="1392" y="416" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z8"/>
+   </properties>
+  </object>
+  <object id="244" name="rob15" type="redoctobattery" x="1296" y="352" width="16" height="16">
+   <properties>
+    <property name="axis" value="x"/>
+    <property name="direction" type="int" value="1"/>
+    <property name="zone" value="z8"/>
+   </properties>
+  </object>
+  <object id="245" name="rob16" type="redoctobattery" x="1456" y="368" width="16" height="16">
+   <properties>
+    <property name="axis" value="y"/>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z8"/>
+   </properties>
+  </object>
+  <object id="218" name="cutter1" type="cutter" x="896" y="1216" width="16" height="16">
    <properties>
     <property name="direction" value="0"/>
     <property name="spawn_in_view" type="bool" value="true"/>
@@ -423,10 +553,30 @@
     <property name="zone" value="z5"/>
    </properties>
   </object>
-  <object id="219" name="bf1" type="blueflea" x="1072" y="1184" width="16" height="16">
+  <object id="249" name="cutter2" type="cutter" x="1408" y="208" width="16" height="16">
+   <properties>
+    <property name="direction" value="0"/>
+    <property name="spawn_in_view" type="bool" value="true"/>
+    <property name="spawn_range" type="int" value="75"/>
+    <property name="zone" value="z9"/>
+   </properties>
+  </object>
+  <object id="250" name="bh4" type="blueheli" x="1792" y="112" width="16" height="16">
    <properties>
     <property name="direction" type="int" value="0"/>
-    <property name="zone" value="z5"/>
+    <property name="zone" value="z9"/>
+   </properties>
+  </object>
+  <object id="251" name="bh5" type="blueheli" x="1856" y="144" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z9"/>
+   </properties>
+  </object>
+  <object id="252" name="bh6" type="blueheli" x="1904" y="128" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="zone" value="z9"/>
    </properties>
   </object>
  </objectgroup>

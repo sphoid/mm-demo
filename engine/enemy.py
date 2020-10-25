@@ -15,7 +15,11 @@ class Enemy(Entity):
 		self.enemies = enemies
 		self.view = view
 		self.player = player
-		# self.view = player.get_view()
+
+		if 'clip' in attributes:
+			self.clip = attributes['clip']
+		else:
+			self.clip = self.get_default_clip()
 
 		if 'gravity' in attributes:
 			self.gravity = attributes['gravity']
@@ -65,7 +69,6 @@ class Enemy(Entity):
 		else:
 			self.zone = None
 
-		# self.stage = stage
 		self.sounds = sounds
 
 		self.reset_animation = False
@@ -80,6 +83,9 @@ class Enemy(Entity):
 		self.position = Vector2(position[0] + (self.get_width() / 2), position[1] + (self.get_height() / 2))
 
 		print("SPAWN: %s direction=%d"%(self.name, self.direction))
+
+	def get_default_clip(self):
+		return False
 
 	def get_default_gravity(self):
 		return False
@@ -232,6 +238,9 @@ class Heli(Enemy):
 		self.swoop_original_y = 0
 		self.swoop_cooling_down = False
 		self.swoop_cooldown_time = 0
+
+	def get_default_clip(self):
+		return True
 
 	def get_default_move_x_speed(self):
 		return 1
@@ -607,6 +616,9 @@ class Cutter(Enemy):
 		self.jumping = False
 		self.move_time = 0
 
+	def get_default_clip(self):
+		return True
+
 	def get_default_move_x_speed(self):
 		return 5
 
@@ -700,7 +712,7 @@ class Flea(Enemy):
 		self.jump_speed = 8
 		self.jumping = False
 		self.compressed = False
-		
+
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
 		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
 
@@ -806,15 +818,28 @@ class RedFlea(Flea):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-class OctoBat(Enemy):
-	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+class OctoBattery(Enemy):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+		self.transitioning = False
+		self.open = False
+		self.opening = False
+		self.closing = False
+
+		if 'axis' in attributes:
+			self.axis = attributes['axis']
+		else:
+			self.axis = self.get_default_axis()
+
+		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
+
+	def get_default_axis(self):
+		return 'x'
 
 	def get_default_move_x_speed(self):
-		return 5
+		return 2
 
 	def get_default_move_y_speed(self):
-		return 5
+		return 2
 
 	def get_default_hit_points(self):
 		return 5
@@ -822,23 +847,121 @@ class OctoBat(Enemy):
 	def get_default_damage(self):
 		return 8
 
-class RedOctoBat(OctoBat):
+	def collide_bottom(self, y):
+		super().collide_bottom(y)
+		self.direction = 0
+		self.start_closing()
+
+	def collide_top(self, y):
+		super().collide_top(y)
+		self.direction = 1
+		self.start_closing()
+
+	def collide_right(self, x):
+		super().collide_right(x)
+		self.direction = 0
+		self.start_closing()
+
+	def collide_left(self, x):
+		super().collide_left(x)
+		self.direction = 1
+		self.start_closing()
+
+	def start_opening(self):
+		self.open = False
+		self.opening = True
+		self.closing = False
+		self.reset_animation = True
+
+	def start_closing(self):
+		self.open = False
+		self.opening = False
+		self.closing = True
+		self.reset_animation = True
+
+	def open_eye(self):
+		self.opening = False
+		self.closing = False
+		self.open = True
+		self.reset_animation = True
+
+	def close_eye(self):
+		self.opening = False
+		self.closing = False
+		self.open = False
+		self.reset_animation = True
+
+	def move(self):
+		self.start_opening()
+		self.reset_animation = True
+
+		if self.axis == 'x':
+			x_speed = self.move_speed_x if self.direction == 1 else -self.move_speed_x
+			y_speed = 0
+		elif self.axis == 'y':
+			x_speed = 0
+			y_speed = self.move_speed_y if self.direction == 1 else -self.move_speed_y
+
+		self.accelerate(x_speed, y_speed)
+		self.start_opening()
+
+	def update(self, delta):
+		super().update(delta)
+
+		if self.dead:
+			self.enemies.kill(self)
+		else:
+			if self.opening:
+				animation = self.animations['opening']
+			elif self.closing:
+				animation = self.animations['closing']
+			elif self.open:
+				animation = self.animations['open']
+			else:
+				animation = self.animations['closed']
+
+			if self.reset_animation:
+				animation.reset()
+				self.reset_animation = False
+
+			self.current_time += delta
+			if self.current_time >= animation.next_time:
+				prev_center = self.rect.center
+				self.image = animation.next(0)['image']
+				self.rect.width = self.image.get_rect().width
+				self.rect.center = prev_center
+				self.current_time = 0
+
+			p = self.position
+			view = self.view
+			offset = view.get_offset()
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
+
+class RedOctoBattery(OctoBattery):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
 
 		self.animations = dict(
-			default=Animation([
+			closed=Animation([
+				dict(duration=2, image=image_at(Rect((96, 131), (16, 16)), colorkey=-1)),
+				dict(duration=2, image=image_at(Rect((96, 131), (16, 16)), colorkey=-1), callback=self.move),
+			]),
+			opening=Animation([
+				dict(duration=0.5, image=image_at(Rect((57, 131), (16, 16)), colorkey=-1), callback=self.open_eye),
+			]),
+			closing=Animation([
+				dict(duration=0.5, image=image_at(Rect((57, 131), (16, 16)), colorkey=-1), callback=self.close_eye),
+			]),
+			open=Animation([
 				dict(duration=0.1, image=image_at(Rect((16, 131), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((57, 131), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((96, 131), (16, 16)), colorkey=-1)),
 			]),
 		)
 
-		start_frame = self.animations['default'].current()
+		start_frame = self.animations['closed'].current()
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-class BlueOctoBat(OctoBat):
+class BlueOctoBattery(OctoBattery):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
 
@@ -854,7 +977,7 @@ class BlueOctoBat(OctoBat):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-class OrangeOctoBat(OctoBat):
+class OrangeOctoBattery(OctoBattery):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
 
@@ -907,16 +1030,17 @@ ENEMY_CLASS=dict(
 	cutter = Cutter,
 	blueflea = BlueFlea,
 	redflea = RedFlea,
-	blueoctobat = BlueOctoBat,
-	redoctobat = RedOctoBat,
-	orangeoctobat = OrangeOctoBat,
+	blueoctobattery = BlueOctoBattery,
+	redoctobattery = RedOctoBattery,
+	orangeoctobattery = OrangeOctoBattery,
 	mambu = Mambu
 )
 
 class Enemies:
-	def __init__(self, spritesheet_loader, sounds, stage, explosions):
+	def __init__(self, spritesheet_loader, sounds, view, explosions):
 		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
-		self.stage = stage
+		# self.stage = stage
+		self.view = view
 		self.sounds = sounds
 		self.spawn_range = 50
 		self.enemies = dict()
@@ -931,7 +1055,8 @@ class Enemies:
 		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
 
 	def spawn_nearby(self, player, zone, zoned):
-		view = self.stage.get_view()
+		# view = self.stage.get_view()
+		view = self.view
 		vw, vh = view.get_width(), view.get_height()
 		offset = view.get_offset()
 
@@ -965,7 +1090,7 @@ class Enemies:
 			print('ERROR: UNknown enemy type %s'%type)
 			return None
 
-		enemy = enemy_class(name, self.spritesheet, self.stage.get_view(), self.sounds, self, player, start_position[0], start_position[1], **attributes)
+		enemy = enemy_class(name, self.spritesheet, self.view, self.sounds, self, player, start_position[0], start_position[1], **attributes)
 
 		self.enemy_sprite_group.add(enemy)
 
@@ -977,13 +1102,14 @@ class Enemies:
 
 	def explode(self, enemy):
 		x, y = enemy.get_rect().center
-		self.explosions.explode(self.stage.get_view(), Vector2(x, y))
+		self.explosions.explode(self.view, Vector2(x, y))
 
 	def update_pew_positions(self):
 		for pew in self.pew_sprite_group:
 			pew.update_position()
 			p = pew.get_position()
-			view = self.stage.get_view()
+			# view = self.stage.get_view()
+			view = self.view
 			offset = view.get_offset()
 
 			if p.x - offset.x > view.get_width() or p.x < offset.x:

@@ -39,15 +39,12 @@ class Game:
 		self.init_hud()
 
 	def init_stage(self):
-		self.stage = Stage(self.config, self.loader, self.spritesheet_loader, self.sounds, self.explosions)
-		self.stage.load()
-		self.stage.set_view(self.view)
+		self.stage = Stage(self.config, self.loader, self.spritesheet_loader, self.view, self.sounds, self.explosions)
 		self.music_player.play(self.stage.get_music_track())
 
 	def init_player(self):
-		self.player = Player(self.spritesheet_loader, self.sounds, self.explosions)
+		self.player = Player(self.spritesheet_loader, self.view, self.sounds, self.explosions)
 		self.sprites.add(self.player)
-		self.player.set_view(self.view)
 
 		if self.debug and self.debug['start_position']:
 			pos = self.debug['start_position']
@@ -342,7 +339,8 @@ class Game:
 
 		for enemy in enemies.get_enemies():
 			self.apply_gravity(enemy)
-			self.check_collision(enemy)
+			if not enemy.is_clip_enabled():
+				self.check_collision(enemy)
 
 		enemies.check_hits(player)
 		enemies.spawn_nearby(player, stage.get_zone(), self.zoned)

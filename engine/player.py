@@ -7,7 +7,7 @@ from .animation import *
 from .weapon import *
 
 class Player(Entity):
-	def __init__(self, spritesheet_loader, sounds, explosions):
+	def __init__(self, spritesheet_loader, view, sounds, explosions):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 		self.sounds = sounds
@@ -27,7 +27,7 @@ class Player(Entity):
 
 		self.velocity = Vector2(0, 0)
 		self.position = Vector2(PLAYER_HALF_WIDTH, PLAYER_HALF_HEIGHT)
-		self.view = None
+		self.view = view
 
 		self.current_time = 0
 		self.direction = 1
