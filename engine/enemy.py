@@ -8,18 +8,19 @@ from .animation import *
 from .explosion import *
 
 class Enemy(Entity):
-	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
 		super().__init__()
 		self.name = name
 		self.spritesheet = spritesheet
 		self.enemies = enemies
+		self.view = view
 		self.player = player
-		self.view = player.get_view()
+		# self.view = player.get_view()
 
 		if 'gravity' in attributes:
 			self.gravity = attributes['gravity']
 		else:
-			self.gravity = False
+			self.gravity = self.get_default_gravity()
 
 		if 'direction' in attributes:
 			self.direction = attributes['direction']
@@ -64,7 +65,7 @@ class Enemy(Entity):
 		else:
 			self.zone = None
 
-		self.stage = stage
+		# self.stage = stage
 		self.sounds = sounds
 
 		self.reset_animation = False
@@ -79,6 +80,9 @@ class Enemy(Entity):
 		self.position = Vector2(position[0] + (self.get_width() / 2), position[1] + (self.get_height() / 2))
 
 		print("SPAWN: %s direction=%d"%(self.name, self.direction))
+
+	def get_default_gravity(self):
+		return False
 
 	def get_default_move_x_speed(self):
 		return 0
@@ -146,19 +150,12 @@ class Enemy(Entity):
 
 	def check_off_screen(self):
 		pass
-		# if not self.view.in_range(self.get_rect(), self.view.get_width() * 2):
-			# print('Enemy offscreen. Killing')
-			# self.enemies.kill(self)
 
 	def update(self, delta):
 		self.react(delta)
 		self.update_position(delta)
 		self.update_status()
-		# self.update_pew_positions()
-		# self.check_hits()
 		self.check_off_screen()
-
-		# self.pew_sprite_group.update(delta)
 
 class Pellet(sprite.Sprite):
 	def __init__(self, image, view, target, *position):
@@ -226,9 +223,9 @@ class Pellet(sprite.Sprite):
 
 
 class Heli(Enemy):
-	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, *position, **attributes)
+		super().__init__(name, spritesheet, view, sounds, enemies, player, *position, **attributes)
 		self.swooping = False
 		self.swoop_direction = 0
 		self.swoop_target_y = 0
@@ -335,7 +332,8 @@ class Heli(Enemy):
 				self.current_time = 0
 
 			p = self.position
-			view = self.stage.get_view()
+			# view = self.stage.get_view()
+			view = self.view
 			offset = view.get_offset()
 			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
 
@@ -382,8 +380,8 @@ class GreenHeli(Heli):
 
 
 class Blaster(Enemy):
-	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
 		self.active = False
 		self.deactivating = False
 		self.shooting = False
@@ -463,7 +461,8 @@ class Blaster(Enemy):
 		self.deactivating = True
 
 	def react(self, delta):
-		view = self.player.get_view()
+		view = self.view
+		# view = self.player.get_view()
 		ppos = self.player.get_position()
 		pos = self.get_position()
 
@@ -596,9 +595,9 @@ class RedBlaster(Blaster):
 		self.rect = self.image.get_rect()
 
 class Cutter(Enemy):
-	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
 		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
 
 		if self.direction:
 			self.angle = 45
@@ -697,17 +696,22 @@ class Cutter(Enemy):
 			self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
 
 class Flea(Enemy):
-	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
-		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
-
-		self.jump_speed = 9
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+		self.jump_speed = 8
 		self.jumping = False
 		self.compressed = False
-		self.gravity = True
+		
+		attributes['direction'] = 0 if position[0] > player.get_position().x else 1
+		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
+
+	def get_default_gravity(self):
+		return True
+
+	def get_default_moving(self):
+		return False
 
 	def get_default_move_x_speed(self):
-		return 3
+		return 2
 
 	def get_default_hit_points(self):
 		return 1
@@ -716,33 +720,55 @@ class Flea(Enemy):
 		return 4
 
 	def collide_bottom(self, y):
+		self.compressed = True
+		self.stop_x()
+
 		super().collide_bottom(y)
 
-		self.compressed = True
+	def get_height(self):
+		return 16
 
 	def jump(self):
+		print('flea jump v=%r speed=%d'%(self.velocity, self.jump_speed))
 		self.jumping = True
 		self.compressed = False
-		self.accelerate(self.move_speed_x, -self.jump_speed)
+		x_speed = self.move_speed_x if self.direction == 1 else -self.move_speed_x
+		self.accelerate(x_speed, -self.jump_speed)
 
 	def react(self, delta):
-		if not self.jumping:
-			player = self.player
-			p = player.get_position()
-			x, y = self.position.x, self.position.y
+		player = self.player
+		p = player.get_position()
+		x, y = self.position.x, self.position.y
 
-			if p.x < x:
-				self.direction = 0
-			elif p.x > x:
-				self.direction = 1
+		if p.x < x:
+			self.direction = 0
+		elif p.x > x:
+			self.direction = 1
 
-			self.jump()
+	def update(self, delta):
+		super().update(delta)
 
-	def update(self):
-		if not self.falling:
-			self.accelerate(0, -self.jump_speed)
-			self.falling = False
+		if self.dead:
+			self.enemies.kill(self)
+		else:
+			animation = self.animations['compressed'] if self.compressed else self.animations['uncompressed']
 
+			if self.reset_animation:
+				animation.reset()
+				self.reset_animation = False
+
+			self.current_time += delta
+			if self.current_time >= animation.next_time:
+				prev_center = self.rect.center
+				self.image = animation.next(0)['image']
+				self.rect.width = self.image.get_rect().width
+				self.rect.center = prev_center
+				self.current_time = 0
+
+			p = self.position
+			view = self.view
+			offset = view.get_offset()
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
 
 class BlueFlea(Flea):
 	def load_sprites(self):
@@ -750,14 +776,15 @@ class BlueFlea(Flea):
 
 		self.animations = dict(
 			compressed=Animation([
-				dict(duration=0.1, image=image_at(Rect((137, 174), (14, 10)), colorkey=-1)),
+				dict(duration=0.75, image=image_at(Rect((137, 165), (14, 19)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((137, 165), (14, 19)), colorkey=-1), callback=self.jump),
 			]),
 			uncompressed=Animation([
-				dict(duration=0.5, image=image_at(Rect((177, 169), (14, 19)), colorkey=-1), callback=jump),
+				dict(duration=0.1, image=image_at(Rect((177, 169), (14, 19)), colorkey=-1)),
 			]),
 		)
 
-		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
+		start_frame = self.animations['uncompressed'].current()
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
@@ -767,14 +794,15 @@ class RedFlea(Flea):
 
 		self.animations = dict(
 			compressed=Animation([
-				dict(duration=0.1, image=image_at(Rect((137, 134), (14, 10)), colorkey=-1)),
+				dict(duration=0.75, image=image_at(Rect((137, 125), (14, 19)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((137, 125), (14, 19)), colorkey=-1), callback=self.jump),
 			]),
 			uncompressed=Animation([
-				dict(duration=0.5, image=image_at(Rect((177, 129), (14, 19)), colorkey=-1), callback=jump),
+				dict(duration=0.1, image=image_at(Rect((177, 129), (14, 19)), colorkey=-1)),
 			]),
 		)
 
-		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
+		start_frame = self.animations['uncompressed'].current()
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
@@ -903,12 +931,11 @@ class Enemies:
 		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
 
 	def spawn_nearby(self, player, zone, zoned):
-		stage = self.stage
-		view = stage.get_view()
+		view = self.stage.get_view()
 		vw, vh = view.get_width(), view.get_height()
 		offset = view.get_offset()
 
-		zenemies = list(filter((lambda name: self.enemies[name]['attributes']['zone'] == zone.get_name()), self.enemies.keys()))
+		zenemies = list(filter((lambda name: 'zone' in self.enemies[name]['attributes'] and self.enemies[name]['attributes']['zone'] == zone.get_name()), self.enemies.keys()))
 
 		enemies = list()
 		for name in zenemies:
@@ -931,8 +958,6 @@ class Enemies:
 					if spawned_enemy is not None:
 						enemies.append(spawned_enemy)
 
-		# return enemies
-
 	def spawn(self, type, name, player, *start_position, **attributes):
 		if type in ENEMY_CLASS:
 			enemy_class = ENEMY_CLASS[type]
@@ -940,7 +965,7 @@ class Enemies:
 			print('ERROR: UNknown enemy type %s'%type)
 			return None
 
-		enemy = enemy_class(name, self.spritesheet, self.stage, self.sounds, self, player, start_position[0], start_position[1], **attributes)
+		enemy = enemy_class(name, self.spritesheet, self.stage.get_view(), self.sounds, self, player, start_position[0], start_position[1], **attributes)
 
 		self.enemy_sprite_group.add(enemy)
 

@@ -89,27 +89,28 @@ class Entity(sprite.Sprite):
 		self.reset_animation = True
 
 	def collide_bottom(self, y):
-		print('collide_bottom %d'%y)
+		print('collide_bottom %r y=%d'%(self, y))
 		self.velocity.y = 0
 		self.position.y = int(y - int(self.get_height() / 2))
 		self.falling = False
 		self.reset_animation = True
+		print('collide_bottom new pos=%d,%d'%(self.position.x, self.position.y))
 
 	def collide_top(self, y):
-		print('collide_top %d'%y)
+		print('collide_top %r y=%d'%(self, y))
 		self.velocity.y = 0
 		self.position.y = int(y + int(self.get_height() / 2))
 		self.falling = True
 
 	def collide_right(self, x):
-		print('collide_right %d'%x)
+		print('collide_right %r x=%d'%(self, x))
 		if self.velocity.x > 0:
 			self.velocity.x = 0
 		self.position.x = int(x - int(self.get_width() / 2))
 		self.reset_animation = True
 
 	def collide_left(self, x):
-		print('collide_left %d'%x)
+		print('collide_left %r x=%d'%(self, x))
 		if self.velocity.x < 0:
 			self.velocity.x = 0
 		self.position.x = int(x + int(self.get_width() / 2))

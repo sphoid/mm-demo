@@ -144,7 +144,7 @@ class Game:
 			player.damage(hazard.get_damage())
 
 		collided = self.check_collision(player)
-		
+
 		if not collided:
 			zone = self.stage.get_zone()
 			zpos = zone.get_position()
@@ -342,6 +342,7 @@ class Game:
 
 		for enemy in enemies.get_enemies():
 			self.apply_gravity(enemy)
+			self.check_collision(enemy)
 
 		enemies.check_hits(player)
 		enemies.spawn_nearby(player, stage.get_zone(), self.zoned)
@@ -356,10 +357,6 @@ class Game:
 		self.apply_gravity(player)
 		self.check_player_collision()
 		self.check_player_off_map()
-
-		player.update_position(delta)
-		player.update_status(delta)
-
 
 	def update(self, delta):
 		player = self.player

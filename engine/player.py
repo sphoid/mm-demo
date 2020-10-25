@@ -31,6 +31,7 @@ class Player(Entity):
 
 		self.current_time = 0
 		self.direction = 1
+		self.gravity = True
 		self.falling = False
 		self.warping = False
 		self.arriving = False
@@ -226,11 +227,10 @@ class Player(Entity):
 		self.velocity.x = 0
 		self.velocity.y = 0
 		self.position.x = ladder.get_left() + int(ladder.get_width() / 2)
-		print('ladder left=%d player=%d,%d'%(ladder.get_left(), self.position.x, self.position.y))
+
 		if going_down:
 			self.rect.width = 16
 			self.position.y += int(self.rect.height / 2)
-			print("Going down")
 
 		self.climbing = True
 		self.gravity = False
@@ -352,6 +352,9 @@ class Player(Entity):
 				self.reset_animation = True
 
 	def update(self, delta):
+		self.update_position(delta)
+		self.update_status(delta)
+
 		if self.dead:
 			self.kill()
 
@@ -409,6 +412,3 @@ class Player(Entity):
 		p = self.position
 		offset = self.view.get_offset()
 		self.rect.center = p.x - offset.x, p.y - offset.y
-
-		v = self.velocity
-		# print('player pos=%d,%d velocity=%d,%d'%(p.x, p.y, v.x, v.y))

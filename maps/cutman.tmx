@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="12" nextobjectid="219">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="12" nextobjectid="220">
  <properties>
   <property name="Music Track" value="cutman-stage"/>
   <property name="Start Zone" value="z1"/>
@@ -420,6 +420,12 @@
     <property name="direction" value="0"/>
     <property name="spawn_in_view" type="bool" value="true"/>
     <property name="spawn_range" type="int" value="75"/>
+    <property name="zone" value="z5"/>
+   </properties>
+  </object>
+  <object id="219" name="bf1" type="blueflea" x="1072" y="1184" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
     <property name="zone" value="z5"/>
    </properties>
   </object>
