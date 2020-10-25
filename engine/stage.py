@@ -95,7 +95,7 @@ class Stage:
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y = int(obj.x), int(obj.y)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
-			# print('LOAD: Enemy type=%s name=%s %d,%d %dx%d'%(obj.type, obj.name, x, y))
+			print('LOAD: Enemy type=%s name=%s %d,%d'%(obj.type, obj.name, x, y))
 
 		for obj in self.map.get_layer_by_name('player'):
 			x, y = int(obj.x), int(obj.y)

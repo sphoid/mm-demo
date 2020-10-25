@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="13" nextobjectid="254">
+<map version="1.4" tiledversion="1.4.2" orientation="orthogonal" renderorder="right-down" width="143" height="145" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#00ffff" nextlayerid="13" nextobjectid="257">
  <properties>
   <property name="Music Track" value="cutman-stage"/>
   <property name="Start Zone" value="z1"/>
  </properties>
  <tileset firstgid="1" source="cutman-tileset.tsx"/>
- <layer id="1" name="tiles" width="143" height="145" visible="0">
+ <layer id="1" name="tiles" width="143" height="145">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -169,7 +169,7 @@
   <object id="196" name="z12" type="zone" x="1776" y="784" width="496" height="256"/>
  </objectgroup>
  <objectgroup id="12" name="items">
-  <object id="253" name="bh1" type="bighealth" x="1824" y="208" width="16" height="16"/>
+  <object id="253" name="bh1" type="bighealth" x="1808" y="208" width="16" height="16"/>
  </objectgroup>
  <objectgroup id="7" name="player">
   <object id="40" type="start" x="16" y="2048" width="16" height="16"/>
@@ -580,6 +580,20 @@
    <properties>
     <property name="direction" type="int" value="0"/>
     <property name="zone" value="z9"/>
+   </properties>
+  </object>
+  <object id="255" name="m1" type="mambu" x="2016" y="416" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="spawn_in_view" type="bool" value="true"/>
+    <property name="zone" value="z10"/>
+   </properties>
+  </object>
+  <object id="256" name="m2" type="mambu" x="2016" y="672" width="16" height="16">
+   <properties>
+    <property name="direction" type="int" value="0"/>
+    <property name="spawn_in_view" type="bool" value="true"/>
+    <property name="zone" value="z11"/>
    </properties>
   </object>
  </objectgroup>

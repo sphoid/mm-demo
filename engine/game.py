@@ -448,7 +448,7 @@ class Game:
 			if event.key == pygame.K_RIGHT:
 				if event.type == pygame.KEYDOWN:
 					# debug('R Down')
-					if not player.is_climbing() and not player.is_warping():
+					if not player.is_climbing() and player.is_moveable():
 						player.move_right()
 					elif player.is_climbing():
 						player.set_direction_right()
@@ -459,7 +459,7 @@ class Game:
 			elif event.key == pygame.K_LEFT:
 				if event.type == pygame.KEYDOWN:
 					# debug('L Down')
-					if not player.is_climbing() and not player.is_warping():
+					if not player.is_climbing() and player.is_moveable():
 						player.move_left()
 					elif player.is_climbing():
 						player.set_direction(0)

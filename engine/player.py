@@ -27,6 +27,7 @@ class Player(Entity):
 		self.view = view
 
 		self.direction = 1
+		self.moveable = True
 		self.gravity = True
 		self.falling = False
 		self.warping = False
@@ -162,6 +163,8 @@ class Player(Entity):
 	def get_stage(self):
 		return self.stage
 
+	def is_moveable(self):
+		return self.moveable
 	def is_dead(self):
 		return self.dead
 
@@ -233,6 +236,7 @@ class Player(Entity):
 		self.warping = True
 		self.falling = True
 		self.gravity = True
+		self.moveable = False
 
 	def grab_ladder(self, ladder, going_down=False):
 		self.velocity.x = 0
@@ -291,6 +295,7 @@ class Player(Entity):
 
 	def stop_arrive(self):
 		self.arriving = False
+		self.moveable = True
 		self.reset_animation = True
 
 	def release_ladder(self):
@@ -316,12 +321,14 @@ class Player(Entity):
 
 	def recover(self):
 		self.damaged = False
+		self.moveable = True
 		self.invincible = True
 		self.invincible_time = 0
 		self.stop_x()
 
 	def damage(self, damage, force=1):
 		self.damaged = True
+		self.moveable = False
 		self.hit_points -= damage
 		self.stop_x()
 

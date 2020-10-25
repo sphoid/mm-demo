@@ -6,6 +6,69 @@ from .entity import *
 from .constants import *
 from .animation import *
 from .explosion import *
+from .util import *
+
+class Pellet(sprite.Sprite):
+	def __init__(self, image, view, damage, velocity, *position):
+		super().__init__()
+		self.image = image
+		self.rect = image.get_rect()
+		self.position = Vector2(position[0], position[1])
+		self.damage = damage
+		self.view = view
+		self.velocity = velocity
+
+	# def calculate_velocity(self, target):
+	# 	dx = self.position.x - target[0]
+	# 	dy = self.position.y - target[1]
+
+	# 	dz = math.sqrt(dx**2 + dy**2)
+
+	# 	speedx = dx/dz * self.speed
+	# 	speedy = dy/dz * self.speed
+
+	# 	return Vector2(speedx, speedy)
+
+	def get_rect(self):
+		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
+
+	def get_width(self):
+		return self.rect.width
+
+	def get_height(self):
+		return self.rect.height
+
+	def get_position(self):
+		return self.position
+
+	def get_bottom(self):
+		return int(self.position.y + int(self.rect.height / 2))
+
+	def get_top(self):
+		return int(self.position.y - int(self.rect.height / 2))
+
+	def get_left(self):
+		return int(self.position.x - int(self.rect.width / 2))
+
+	def get_right(self):
+		return int(self.position.x + int(self.rect.width / 2))
+
+	def collides_with(self, rect):
+		return self.get_rect().colliderect(rect)
+
+	def get_damage(self):
+		return self.damage
+
+	def update_position(self):
+		v = self.velocity
+		self.position.x += v.x
+		self.position.y += v.y
+
+	def update(self, delta):
+		self.update_position()
+
+		offset = self.view.get_offset()
+		self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
 
 class Enemy(Entity):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
@@ -163,70 +226,6 @@ class Enemy(Entity):
 		self.update_status()
 		self.check_off_screen()
 
-class Pellet(sprite.Sprite):
-	def __init__(self, image, view, target, *position):
-		super().__init__()
-		self.image = image
-		self.rect = image.get_rect()
-		self.position = Vector2(position[0], position[1])
-		self.target = target
-		self.speed = 1
-		self.damage = 2
-		self.view = view
-		self.velocity = self.calculate_velocity()
-
-	def calculate_velocity(self):
-		dx = self.position.x - self.target[0]
-		dy = self.position.y - self.target[1]
-
-		dz = math.sqrt(dx**2 + dy**2)
-
-		speedx = dx/dz * self.speed
-		speedy = dy/dz * self.speed
-
-		return Vector2(speedx, speedy)
-
-	def get_rect(self):
-		return Rect((self.get_left(), self.get_top()), (self.get_width(), self.get_height()))
-
-	def get_width(self):
-		return self.rect.width
-
-	def get_height(self):
-		return self.rect.height
-
-	def get_position(self):
-		return self.position
-
-	def get_bottom(self):
-		return int(self.position.y + int(self.rect.height / 2))
-
-	def get_top(self):
-		return int(self.position.y - int(self.rect.height / 2))
-
-	def get_left(self):
-		return int(self.position.x - int(self.rect.width / 2))
-
-	def get_right(self):
-		return int(self.position.x + int(self.rect.width / 2))
-
-	def collides_with(self, rect):
-		return self.get_rect().colliderect(rect)
-
-	def get_damage(self):
-		return self.damage
-
-	def update_position(self):
-		v = self.velocity
-		self.position.x += v.x
-		self.position.y += v.y
-
-	def update(self, delta):
-		self.update_position()
-
-		offset = self.view.get_offset()
-		self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
-
 
 class Heli(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
@@ -341,7 +340,6 @@ class Heli(Enemy):
 				self.current_time = 0
 
 			p = self.position
-			# view = self.stage.get_view()
 			view = self.view
 			offset = view.get_offset()
 			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
@@ -399,7 +397,7 @@ class Blaster(Enemy):
 		self.shoot_time = 0
 		self.shot_frequency = 0.75
 		self.max_shots = 4
-		self.targets = None
+		self.pellet_speed = 1
 
 	def get_default_hit_points(self):
 		return 1
@@ -420,36 +418,29 @@ class Blaster(Enemy):
 			self.set_inactive()
 
 	def start_shooting(self):
-		self.targets = self.calculate_targets()
+		if self.direction == 0:
+			self.angles = [130, 160, 190, 220]
+		else:
+			self.angles = [50, 20, 350, 320]
+
 		self.shooting = True
 		self.shoot_time = 0
 		self.shots_fired = 0
 
-	def calculate_targets(self):
-		p = self.position
-		view = self.view
-		vw, vh = view.get_width(), view.get_height()
-		offset = view.get_offset()
+	def calculate_pellet_velocity(self, angle):
+		shoot_speed = 1
+		radians = math.radians(angle)
+		vx = shoot_speed * math.cos(radians)
+		vy = shoot_speed * math.sin(radians)
 
-		if self.direction:
-			target1 = p.x - (vw / 4), offset.y
-			target2 = offset.x, p.y - (vh / 4)
-			target3 = offset.x, p.y + (vh / 4)
-			target4 = p.x - (vw / 4), offset.y + vh
-		else:
-			target1 = p.x + (vw / 4), offset.y
-			target2 = offset.x + vw, p.y - (vh / 4)
-			target3 = offset.x + vw, p.y + (vh / 4)
-			target4 = p.x + (vw / 4), offset.y + vh
-
-		return [target1, target2, target3, target4]
+		return Vector2(vx, vy)
 
 	def shoot(self):
-		target = self.targets.pop()
+		v = calculate_velocity(self.pellet_speed, self.angles.pop())
+		# v = self.calculate_pellet_velocity(self.angles.pop())
 		p = self.position
-		pellet = Pellet(self.pellet_image, self.view, target, p.x, p.y + (self.get_height() / 2))
+		pellet = Pellet(self.pellet_image, self.view, self.damage, v, p.x, p.y)
 		self.enemies.shoot(pellet)
-		# self.pew_sprite_group.add(pellet)
 		self.sounds.play_sound('eshoot')
 		self.shoot_time = 0
 		self.shots_fired += 1
@@ -994,11 +985,21 @@ class OrangeOctoBattery(OctoBattery):
 		self.rect = self.image.get_rect()
 
 class Mambu(Enemy):
-	def __init__(self, name, spritesheet, stage, sounds, enemies, player, *position, **attributes):
-		super().__init__(name, spritesheet, stage,sounds, enemies, player, position[0], position[1], **attributes)
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, *position, **attributes):
+		# self.moving = True
+		# self.shooting = False
+		self.pellet_speed = 1
+
+		super().__init__(name, spritesheet, view, sounds, enemies, player, position[0], position[1], **attributes)
+
+	def get_default_clip(self):
+		return True
+
+	def get_default_moving(self):
+		return True
 
 	def get_default_move_x_speed(self):
-		return 3
+		return 1
 
 	def get_default_hit_points(self):
 		return 1
@@ -1010,17 +1011,91 @@ class Mambu(Enemy):
 		image_at = self.spritesheet.image_at
 
 		self.animations = dict(
-			moving=Animation([
-				dict(duration=0.1, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1)),
-			]),
-			shooting=Animation([
-				dict(duration=0.1, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1)),
-			]),
+			default=Animation([
+				dict(duration=1, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.5, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1), callback=self.stop),
+				dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.shoot),
+				dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.move),
+			])
+			# moving=Animation([
+			# 	dict(duration=1, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1)),
+			# 	dict(duration=0.5, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1), callback=self.stop),
+			# 	dict(duration=0.5, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1), callback=self.shoot),
+			# ]),
+			# shooting=Animation([
+			# 	dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1)),
+			# 	dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.move),
+			# ]),
 		)
 
-		start_frame = self.animations['moving'].current()
+		self.pellet_image = image_at(Rect((121, 96), (6, 6)), -1)
+
+		start_frame = self.animations['default'].current()
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
+
+	def stop(self):
+		print('Mambu stop')
+		self.velocity.x = 0
+		# self.stop_x()
+		# self.moving = False
+		# self.shooting = True
+		# self.reset_animation = True
+
+	def shoot(self):
+		print('Mambu shoot')
+		# self.shooting = True
+		angles = [45, 90, 135, 180, 225, 270, 315, 360]
+		p = self.position
+		for angle in angles:
+			v = calculate_velocity(self.pellet_speed, angle)
+			pellet = Pellet(self.pellet_image, self.view, self.damage, v, p.x, p.y)
+			self.enemies.shoot(pellet)
+
+		self.sounds.play_sound('eshoot')
+
+	def move(self):
+		print('Mambu move')
+		# if not self.moving:
+			# self.moving = True
+		vx = -self.move_speed_x if self.direction == 0 else self.move_speed_x
+		self.accelerate(vx, 0)
+		# self.reset_animation = True
+
+	def hit(self, pew):
+		if self.moving:
+			self.sounds.play_sound('dink')
+		else:
+			super().hit(pew)
+
+	def update(self, delta):
+		super().update(delta)
+
+		if self.dead:
+			self.enemies.kill(self)
+		else:
+			animation = self.animations['default']
+			# if self.moving:
+			# 	animation = self.animations['moving']
+			# else:
+			# 	animation = self.animations['shooting']
+
+			if self.reset_animation:
+				animation.reset()
+				self.reset_animation = False
+
+			self.current_time += delta
+			if self.current_time >= animation.next_time:
+				prev_center = self.rect.center
+				self.image = animation.next(0)['image']
+				self.rect.width = self.image.get_rect().width
+				self.rect.center = prev_center
+				self.current_time = 0
+
+			p = self.position
+			view = self.view
+			offset = view.get_offset()
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
 
 ENEMY_CLASS=dict(
 	blueheli = BlueHeli,
@@ -1033,7 +1108,7 @@ ENEMY_CLASS=dict(
 	blueoctobattery = BlueOctoBattery,
 	redoctobattery = RedOctoBattery,
 	orangeoctobattery = OrangeOctoBattery,
-	mambu = Mambu
+	mambu = Mambu,
 )
 
 class Enemies:
@@ -1054,12 +1129,13 @@ class Enemies:
 		self.enemies[name] = dict(start_position=start_position, type=type, count=0, attributes=attributes)
 
 	def spawn_nearby(self, player, zone, zoned):
-		# view = self.stage.get_view()
 		view = self.view
 		vw, vh = view.get_width(), view.get_height()
 		offset = view.get_offset()
 
 		zenemies = list(filter((lambda name: 'zone' in self.enemies[name]['attributes'] and self.enemies[name]['attributes']['zone'] == zone.get_name()), self.enemies.keys()))
+
+		# print('spawn_nearby zone=%s zoned=%r'%(zone.get_name(), zoned))
 
 		enemies = list()
 		for name in zenemies:
@@ -1071,7 +1147,8 @@ class Enemies:
 				spawn = False
 				if zoned or spawn_in_view:
 					spawn_range = enemy['attributes']['spawn_range'] if 'spawn_range' in enemy['attributes'] else -1
-					if (spawn_range > -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16))) and abs(start_position[0] - player.get_position().x) < self.spawn_range) or (spawn_range == -1 and view.in_view(Rect((start_position[0], start_position[1]), (16, 16)))):
+					in_view = view.in_view(Rect((start_position[0], start_position[1]), (16, 16)))
+					if (spawn_range > -1 and in_view and abs(start_position[0] - player.get_position().x) < self.spawn_range) or (spawn_range == -1 and in_view):
 						spawn = True
 				elif view.in_range(Rect((start_position[0], start_position[1]), (16, 16)), self.spawn_range):
 					spawn = True
@@ -1107,7 +1184,6 @@ class Enemies:
 		for pew in self.pew_sprite_group:
 			pew.update_position()
 			p = pew.get_position()
-			# view = self.stage.get_view()
 			view = self.view
 			offset = view.get_offset()
 
@@ -1127,11 +1203,17 @@ class Enemies:
 		enemy.kill()
 		print('KILL %s count=%d'%(name, self.enemies[name]['count']))
 
+	def check_off_screen(self):
+		for enemy in self.enemy_sprite_group:
+			if self.view.out_of_range(enemy.get_rect(), int(self.view.get_width() / 2)):
+				self.kill(enemy)
+
 	def update(self, delta):
 		self.update_pew_positions()
 		self.pew_sprite_group.update(delta)
 		self.enemy_sprite_group.update(delta)
 		self.explosions.update(delta)
+		self.check_off_screen()
 
 	def draw(self, surface):
 		self.pew_sprite_group.draw(surface)

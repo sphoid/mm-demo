@@ -43,8 +43,8 @@ class BigHealth(Item):
 
 		self.animations = dict(
 			default=Animation([
-				dict(duration=2, image=image_at(Rect((52, 5), (14, 16)), alpha=True)),
-				dict(duration=0.25, image=image_at(Rect((34, 5), (14, 16)), alpha=True))
+				dict(duration=2, image=image_at(Rect((51, 5), (16, 16)), alpha=True)),
+				dict(duration=0.25, image=image_at(Rect((33, 5), (16, 16)), alpha=True))
 			])
 		)
 
@@ -57,9 +57,29 @@ class BigHealth(Item):
 		player.heal(14)
 		self.kill()
 
+class SmallHealth(Item):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=2, image=image_at(Rect((2, 5), (16, 16)), alpha=True)),
+			])
+		)
+
+		self.animation = self.animations['default']
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+	def use(self, player):
+		player.heal(6)
+		self.kill()
+
 
 ITEM_CLASS=dict(
 	bighealth = BigHealth,
+	smallhealth = SmallHealth,
 )
 
 class Items:
