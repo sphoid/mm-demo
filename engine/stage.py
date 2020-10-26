@@ -9,6 +9,7 @@ from .tile import *
 from .enemy import *
 from .item import *
 from .hazards import Hazards
+from .gate import Gates
 
 class Stage:
 	def __init__(self, config, loader, spritesheet_loader, view, sounds, explosions):
@@ -26,6 +27,7 @@ class Stage:
 		self.platforms = {}
 		self.hazards = {}
 		self.items = {}
+		self.gates = {}
 		self.tile_sprite_group = sprite.Group()
 		self.enemies = None
 		self.items = None
@@ -90,6 +92,12 @@ class Stage:
 		for obj in self.map.get_layer_by_name('hazards'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.hazards[x, y] = Hazards.load(obj.type, Rect((x, y), (width, height)))
+
+		self.gates = Gates(self.spritesheet_loader, self.sounds, self.view)
+		for obj in self.map.get_layer_by_name('gates'):
+			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
+			self.gates.load(x, y, width, height)
+			# self.gates[x, y] = Gate(self.spritesheet_loader, self.sounds, self.view, Rect((x, y), (width, height)))
 
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self, self.explosions)
 		for obj in self.map.get_layer_by_name('enemies'):
@@ -201,6 +209,9 @@ class Stage:
 
 	def get_items(self):
 		return self.items
+
+	def get_gates(self):
+		return self.gates
 
 	def update(self, delta):
 		self.tile_sprite_group.update(delta)

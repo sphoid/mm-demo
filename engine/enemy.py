@@ -1079,7 +1079,7 @@ class BigEye(Enemy):
 		return False
 
 	def get_default_move_x_speed(self):
-		return 2
+		return 1
 
 	def get_default_hit_points(self):
 		return 16

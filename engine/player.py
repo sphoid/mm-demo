@@ -7,7 +7,7 @@ from .animation import *
 from .weapon import *
 
 class Player(Entity):
-	def __init__(self, spritesheet_loader, view, sounds, explosions):
+	def __init__(self, spritesheet_loader, view, sounds, explosions, debug):
 		super().__init__()
 		self.spritesheet_loader = spritesheet_loader
 		self.sounds = sounds
@@ -18,6 +18,7 @@ class Player(Entity):
 		self.hit_points = self.max_hit_points
 		self.stage = None
 		self.explosions = explosions
+		self.debug = debug
 
 		self.max_height = 48
 		self.max_width = 48
@@ -329,7 +330,9 @@ class Player(Entity):
 	def damage(self, damage, force=1):
 		self.damaged = True
 		self.moveable = False
-		self.hit_points -= damage
+
+		if not self.debug['player_invincible']:
+			self.hit_points -= damage
 		self.stop_x()
 
 		if self.hit_points <= 0:

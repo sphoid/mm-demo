@@ -18,6 +18,7 @@ class GameConfig:
 			player_debug = PLAYER_DEBUG,
 			start_zone = DEBUG_START_ZONE,
 			start_position = DEBUG_START_POSITION,
+			player_invincible = PLAYER_INVINCIBLE,
 		)
 
 class GameLoop:

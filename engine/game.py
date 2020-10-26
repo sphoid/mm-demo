@@ -43,7 +43,7 @@ class Game:
 		self.music_player.play(self.stage.get_music_track())
 
 	def init_player(self):
-		self.player = Player(self.spritesheet_loader, self.view, self.sounds, self.explosions)
+		self.player = Player(self.spritesheet_loader, self.view, self.sounds, self.explosions, self.debug)
 		self.sprites.add(self.player)
 
 		if self.debug and self.debug['start_position']:
@@ -60,6 +60,7 @@ class Game:
 		collided = False
 		colliding_platforms = list(filter((lambda platform: platform.collides_with(entity.get_rect())), self.stage.get_platforms()))
 		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(entity.get_rect())), self.stage.get_ladders()))
+		colliding_gates = list(filter((lambda gate: gate.collides_with(entity.get_rect())), self.stage.get_gates().get_gates()))
 		v = entity.get_velocity()
 		p = entity.get_position()
 		if len(colliding_platforms) > 0:
@@ -68,36 +69,21 @@ class Game:
 				left, right, top, bottom = entity.get_left(), entity.get_right(), entity.get_top(), entity.get_bottom()
 
 				if v.y > 0 and bottom > ptop and ptop - bottom < entity.get_height() / 2:
-					print('entity collide bottom @ pos=%d,%d right=%d'%(p.x, p.y, right))
 					entity.collide_bottom(ptop)
-
 					self.check_collision(entity)
-
 					collided = True
-
 				elif v.y < 0 and top < pbottom and pbottom - top < entity.get_height() / 2:
 					entity.collide_top(pbottom)
-
 					self.check_collision(entity)
-
 					collided = True
-
 				elif left < pright and pright - left < entity.get_width() / 2:
 					entity.collide_left(pright)
-
 					self.check_collision(entity)
-
 					collided = True
-
 				elif right > pleft and right - pleft < entity.get_width() / 2:
-					print('entity collide @ right pos=%d,%d right=%d'%(p.x, p.y, right))
 					entity.collide_right(pleft)
-					print('entity after pos=%d,%d right=%d'%(entity.get_position().x, entity.get_position().y, entity.get_right()))
-
 					self.check_collision(entity)
-
 					collided = True
-
 				# if v.y > 0 and v.x == 0 and ptop < bottom :
 				# 	entity.collide_bottom(ptop)
 
@@ -161,6 +147,19 @@ class Game:
 				if v.y > 0 and ladder.get_top() < entity.get_bottom() and (entity.get_bottom() - ladder.get_top()) < PLAYER_HALF_HEIGHT:
 					entity.collide_bottom(ladder.get_top())
 					collided = True
+		elif len(colliding_gates) > 0:
+			print('Gate collide')
+			gate = colliding_gates[0]
+			if not gate.is_locked():
+				entity.stop_x()
+				gate.open()
+			else:
+				gp = gate.get_position()
+				if p.x < gp.x:
+					entity.collide_right(gate.get_left())
+				elif p.x > gp.x:
+					entity.collide_left(gate.get_right())
+			collided = True
 
 		return collided
 
@@ -402,6 +401,12 @@ class Game:
 
 		items.update(delta)
 
+	def update_gates(self, delta):
+		stage = self.stage
+		gates = stage.get_gates()
+
+		gates.update(delta)
+
 	def update_player(self, delta):
 		player = self.player
 
@@ -429,6 +434,7 @@ class Game:
 			self.update_player(delta)
 			self.update_enemies(delta)
 			self.update_items(delta)
+			self.update_gates(delta)
 			self.check_weapon_hits()
 
 			self.update_zone()
@@ -451,6 +457,7 @@ class Game:
 		stage = self.stage
 		enemies = stage.get_enemies()
 		items = stage.get_items()
+		gates = stage.get_gates()
 		hud = self.hud
 		view = self.view
 
@@ -461,6 +468,7 @@ class Game:
 		stage.draw(buffer)
 		enemies.draw(buffer)
 		items.draw(buffer)
+		gates.draw(buffer)
 
 		if self.debug['player_debug']:
 			player = self.player
