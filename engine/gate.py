@@ -48,6 +48,9 @@ class Gate(GameObject):
 
 		self.image = image_at(Rect((85, 0), (16, 16)))
 
+		self.fill_sprites()
+
+	def fill_sprites(self):
 		xtiles = int(self.rect.width / 16)
 		ytiles = int(self.rect.height / 16)
 		p = self.position
@@ -57,8 +60,15 @@ class Gate(GameObject):
 				xpos, ypos = p.x + (col * 16), p.y + (row * 16)
 				self.gate_sprite_group.add(GateSprite(self.image, self.view, self, xpos, ypos))
 
+
 	def is_locked(self):
 		return self.locked
+
+	def lock(self):
+		self.locked = True
+
+	def is_open(self):
+		return self.get_height() == 0
 
 	def open(self):
 		if not self.opening:
@@ -67,6 +77,7 @@ class Gate(GameObject):
 
 	def close(self):
 		if not self.closing:
+			print('Closing gate')
 			self.closing = True
 			self.animation_time = 0
 
@@ -82,11 +93,13 @@ class Gate(GameObject):
 
 		elif self.closing:
 			if self.get_height() == self.max_height:
+				print('Gate closed')
 				self.closing = False
 			else:
 				self.animation_time += delta
 				if self.animation_time > 0.1:
 					self.rect.height += 16
+					self.fill_sprites()
 					self.animation_time = 0
 
 		self.gate_sprite_group.update(delta)

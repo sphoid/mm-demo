@@ -41,6 +41,7 @@ class Player(Entity):
 		self.healing = False
 		self.healing_left = 0
 		self.invincible = False
+		self.immobilized = False
 
 		self.current_time = 0
 		self.invincible_time = 0
@@ -166,6 +167,7 @@ class Player(Entity):
 
 	def is_moveable(self):
 		return self.moveable
+
 	def is_dead(self):
 		return self.dead
 
@@ -358,6 +360,19 @@ class Player(Entity):
 	def is_damaged(self):
 		return self.damaged
 
+	def immobilize(self):
+		self.set_velocity(0, 0)
+		self.moveable = False
+		self.gravity = False
+		self.immobilized = True
+		self.reset_animation = True
+
+	def mobilize(self):
+		self.moveable = True
+		self.gravity = True
+		self.immobilized = False
+		self.reset_animation = True
+
 	def die(self):
 		self.dead = True
 		self.kill()
@@ -400,6 +415,8 @@ class Player(Entity):
 			animation = self.animations['warp_arrive']
 		elif self.damaged:
 			animation = self.animations['damaged_right'] if self.direction == 1 else self.animations['damaged_left']
+		elif self.immobilized:
+			animation = self.animations['jump_right'] if self.direction == 1 else self.animations['jump_left']
 		elif self.climbing:
 			if self.climbing_over:
 				animation = self.animations['climb_over']
