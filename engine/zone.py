@@ -8,8 +8,5 @@ class Zone(GameObject):
 
 		super().__init__(rect, name=name, attributes=attributes)
 
-		print('zone attributes %r'%self.attributes)
-
-
 	def get_background_color(self):
 		return self.attributes['background'] if 'background' in self.attributes else None

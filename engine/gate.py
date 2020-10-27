@@ -77,7 +77,6 @@ class Gate(GameObject):
 
 	def close(self):
 		if not self.closing:
-			print('Closing gate')
 			self.closing = True
 			self.animation_time = 0
 
@@ -93,7 +92,6 @@ class Gate(GameObject):
 
 		elif self.closing:
 			if self.get_height() == self.max_height:
-				print('Gate closed')
 				self.closing = False
 			else:
 				self.animation_time += delta

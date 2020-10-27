@@ -57,7 +57,7 @@ class Game:
 		self.life_meter = LifeMeter(self.spritesheet_loader, self.sounds, self.player)
 		self.hud = HudGroup([self.life_meter])
 
-	def check_collision(self, entity):
+	def check_collision(self, entity, recursion=False):
 		collided = False
 		colliding_platforms = list(filter((lambda platform: platform.collides_with(entity.get_rect())), self.stage.get_platforms()))
 		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(entity.get_rect())), self.stage.get_ladders()))
@@ -69,21 +69,29 @@ class Game:
 				pleft, pright, ptop, pbottom, pwidth, pheight = platform.get_left(), platform.get_right(), platform.get_top(), platform.get_bottom(), platform.get_width(), platform.get_height()
 				left, right, top, bottom = entity.get_left(), entity.get_right(), entity.get_top(), entity.get_bottom()
 
-				if v.y > 0 and bottom > ptop and ptop - bottom < entity.get_height() / 2:
+				if p.y < ptop and bottom > ptop and ptop - bottom < TILE_HEIGHT:
 					entity.collide_bottom(ptop)
-					self.check_collision(entity)
+					platform.flag()
+					if not recursion:
+						self.check_collision(entity, True)
 					collided = True
-				elif v.y < 0 and top < pbottom and pbottom - top < entity.get_height() / 2:
+				elif p.y > pbottom and top < pbottom and pbottom - top < TILE_HEIGHT:
 					entity.collide_top(pbottom)
-					self.check_collision(entity)
+					platform.flag()
+					if not recursion:
+						self.check_collision(entity, True)
 					collided = True
-				elif left < pright and pright - left < entity.get_width() / 2:
+				elif left < pright and pright - left < TILE_WIDTH:
 					entity.collide_left(pright)
-					self.check_collision(entity)
+					platform.flag()
+					if not recursion:
+						self.check_collision(entity, True)
 					collided = True
-				elif right > pleft and right - pleft < entity.get_width() / 2:
+				elif right > pleft and right - pleft < TILE_WIDTH:
 					entity.collide_right(pleft)
-					self.check_collision(entity)
+					platform.flag()
+					if not recursion:
+						self.check_collision(entity, True)
 					collided = True
 		elif entity.is_gravity_enabled() and len(colliding_ladders) > 0:
 			for ladder in colliding_ladders:
@@ -139,22 +147,18 @@ class Game:
 			offset = view.get_offset()
 
 			if player.get_left() < zpos.x:
-				print('collide zone left boundary')
 				player.collide_left(zpos.x)
 			elif player.get_right() > (offset.x + zw):
-				print('collide zone right boundary px=%d offsetx=%d vw=%d'%(player.get_right(), offset.x, view.get_width()))
 				player.collide_right(offset.x + zw)
 
 		if not player.is_damaged() and not player.is_invincible():
 			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.get_enemies().get_enemies()))
 			if len(colliding_enemies) > 0:
 				enemy = colliding_enemies[0]
-				print('enemy hit epos=%d,%d ppos=%d, %d'%(enemy.get_position().x, enemy.get_position().y, player.get_position().x, player.get_position().y))
 				player.damage(enemy.get_damage())
 
 		collided_items = list(filter((lambda item: item.collides_with(player.get_rect())), stage.get_items().get_items()))
 		for item in collided_items:
-			print('using item %r'%item)
 			item.use(player)
 
 	def check_player_off_map(self):
@@ -461,29 +465,24 @@ class Game:
 
 			if event.key == pygame.K_RIGHT:
 				if event.type == pygame.KEYDOWN:
-					# debug('R Down')
 					if not player.is_climbing() and player.is_moveable():
 						player.move_right()
 					elif player.is_climbing():
 						player.set_direction_right()
 				elif event.type == pygame.KEYUP:
-					# debug('R Up')
 					if player.get_velocity().x > 0:
 						player.stop_x()
 			elif event.key == pygame.K_LEFT:
 				if event.type == pygame.KEYDOWN:
-					# debug('L Down')
 					if not player.is_climbing() and player.is_moveable():
 						player.move_left()
 					elif player.is_climbing():
 						player.set_direction(0)
 				elif event.type == pygame.KEYUP:
-					# debug('L Up')
 					if player.get_velocity().x < 0:
 						player.stop_x()
 			elif event.key == pygame.K_UP:
 				if event.type == pygame.KEYDOWN:
-					# debug('U Down')
 					if not player.is_climbing():
 						grabbed = self.grab_ladder_behind(player)
 						if grabbed:
@@ -491,12 +490,10 @@ class Game:
 					else:
 						player.climb_up()
 				elif event.type == pygame.KEYUP:
-					# debug('U Up')
 					if player.is_climbing():
 						player.stop_climbing()
 			elif event.key == pygame.K_DOWN:
 				if event.type == pygame.KEYDOWN:
-					# debug('D Down')
 					if not player.is_climbing():
 						grabbed = self.grab_ladder_below(player)
 						if grabbed:
@@ -504,16 +501,13 @@ class Game:
 					else:
 						player.climb_down()
 				elif event.type == pygame.KEYUP:
-					# debug('D Up')
 					if player.is_climbing():
 						player.stop_climbing()
 			elif event.key == pygame.K_SPACE and event.type == pygame.KEYDOWN:
-				# debug('Space')
 				if not player.is_falling():
 					player.jump()
 			elif event.key == pygame.K_f:
 				if event.type == pygame.KEYDOWN:
-					# debug('Pew')
 					pew = player.shoot()
 					self.sprites.add(pew)
 				elif event.type == pygame.KEYUP:

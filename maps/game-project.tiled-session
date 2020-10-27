@@ -18,10 +18,10 @@
         },
         "cutman.tmx": {
             "scale": 3,
-            "selectedLayer": 7,
+            "selectedLayer": 5,
             "viewCenter": {
-                "x": 1336,
-                "y": 1224
+                "x": 3088.6666666666665,
+                "y": 912
             }
         },
         "level-1.tmx": {

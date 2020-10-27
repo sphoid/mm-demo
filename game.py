@@ -59,9 +59,6 @@ class GameLoop:
 				self.mode.update(delta)
 				self.mode.render()
 
-				# print('fps=%d'%(self.clock.get_fps()))
-
-
 	def set_mode(self, mode_id):
 		self.init_screen()
 		self.init_audio()

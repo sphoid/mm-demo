@@ -355,8 +355,6 @@ class BlueHeli(Heli):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
-		print('BlueHeli.load_sprites called');
-
 class GreenHeli(Heli):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
@@ -541,7 +539,7 @@ class Blaster(Enemy):
 		return 1
 
 	def get_default_damage(self):
-		return 4
+		return 2
 
 	def set_open(self):
 		self.open = True
@@ -599,7 +597,6 @@ class Blaster(Enemy):
 
 	def react(self, delta):
 		view = self.view
-		# view = self.player.get_view()
 		ppos = self.player.get_position()
 		pos = self.get_position()
 
@@ -779,7 +776,6 @@ class Cutter(Enemy):
 		self.rect = self.image.get_rect()
 
 	def jump(self, angle, target, delta):
-		print('JUMP angle=%d delta=%f'%(angle, delta))
 		self.jumping = True
 		self.angle = angle
 		self.jump_start_time = delta
@@ -868,7 +864,6 @@ class Flea(Enemy):
 		return 16
 
 	def jump(self):
-		print('flea jump v=%r speed=%d'%(self.velocity, self.jump_speed))
 		self.jumping = True
 		self.compressed = False
 		x_speed = self.move_speed_x if self.direction == 1 else -self.move_speed_x

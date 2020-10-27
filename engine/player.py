@@ -191,6 +191,9 @@ class Player(Entity):
 	def get_width(self):
 		return 16
 
+	def get_height(self):
+		return 24
+
 	def get_direction(self):
 		return self.direction
 

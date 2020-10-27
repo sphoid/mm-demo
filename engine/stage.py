@@ -67,12 +67,10 @@ class Stage:
 				tile = Tile(image, self, position[0], position[1])
 				self.tiles[x, y] = tile
 				self.tile_sprite_group.add(tile)
-				# print('LOAD: Tile %d,%d %dx%d'%(position[0], position[1], width, height))
 
 		for obj in self.map.get_layer_by_name('zones'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.zones[obj.name] = Zone(Rect((x, y), (width, height)), obj.name, **obj.properties)
-			print('LOAD: Zone %d,%d %dx%d'%(x, y, width, height))
 
 		if self.debug['start_zone'] is not None:
 			zone_name = self.debug['start_zone']
@@ -98,13 +96,11 @@ class Stage:
 		for obj in self.map.get_layer_by_name('gates'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.gates.load(x, y, width, height)
-			# self.gates[x, y] = Gate(self.spritesheet_loader, self.sounds, self.view, Rect((x, y), (width, height)))
 
 		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self, self.explosions)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y = int(obj.x), int(obj.y)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
-			print('LOAD: Enemy type=%s name=%s %d,%d'%(obj.type, obj.name, x, y))
 
 		for obj in self.map.get_layer_by_name('player'):
 			x, y = int(obj.x), int(obj.y)
@@ -117,7 +113,6 @@ class Stage:
 		for obj in self.map.get_layer_by_name('items'):
 			x, y = int(obj.x), int(obj.y)
 			self.items.load(obj.type, x, y)
-			print("loaded item %s %d,%d"%(obj.type, x, y))
 
 		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
 
