@@ -423,10 +423,8 @@ class Game:
 		view = self.view
 
 		background_color = zone.get_background_color()
-		# print('zone background color %r'%background_color)
 		if background_color is None:
 			background_color = stage.get_background_color()
-			# print('stage background color %r'%background_color)
 
 		buffer.fill(background_color)
 

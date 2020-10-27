@@ -63,6 +63,9 @@ class GameLoop:
 
 
 	def set_mode(self, mode_id):
+		self.init_screen()
+		self.init_audio()
+
 		if mode_id == MODE_MENU:
 			self.mode = Menu(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
 		elif mode_id == MODE_GAME:
@@ -71,9 +74,6 @@ class GameLoop:
 			self.mode = GameOver(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
 
 	def start(self):
-		self.init_screen()
-		self.init_audio()
-
 		if self.mode is None:
 			self.set_mode(MODE_MENU)
 
