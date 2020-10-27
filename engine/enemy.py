@@ -346,8 +346,8 @@ class BlueHeli(Heli):
 				dict(duration=0.05, image=image_at(Rect((416, 329), (16, 20)), -1)),
 			]),
 			move_right=Animation([
-				dict(duration=0.05, image=image_at(Rect((376, 329), (16, 20)), -1, flip=True)),
-				dict(duration=0.05, image=image_at(Rect((416, 329), (16, 20)), -1, flip=True)),
+				dict(duration=0.05, image=image_at(Rect((376, 329), (16, 20)), -1, flip='x')),
+				dict(duration=0.05, image=image_at(Rect((416, 329), (16, 20)), -1, flip='x')),
 			])
 		)
 
@@ -367,8 +367,8 @@ class GreenHeli(Heli):
 				dict(duration=0.05, image=image_at(Rect((336, 329), (16, 20)), -1)),
 			]),
 			move_right=Animation([
-				dict(duration=0.05, image=image_at(Rect((292, 326), (16, 20)), -1, flip=True)),
-				dict(duration=0.05, image=image_at(Rect((336, 329), (16, 20)), -1, flip=True)),
+				dict(duration=0.05, image=image_at(Rect((292, 326), (16, 20)), -1, flip='x')),
+				dict(duration=0.05, image=image_at(Rect((336, 329), (16, 20)), -1, flip='x')),
 			])
 		)
 
@@ -376,6 +376,152 @@ class GreenHeli(Heli):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
+class ScrewDriver(Enemy):
+	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
+		self.active = False
+		self.deactivating = False
+		self.pellet_speed = 1
+		self.shots = 0
+		self.cooldown_time = 0
+
+	def get_default_hit_points(self):
+		return 3
+
+	def get_default_damage(self):
+		return 4
+
+	def activate(self):
+		self.active = True
+		self.shots = 0
+		self.reset_animation = True
+
+	def start_deactivating(self):
+		self.deactivating = True
+
+	def deactivate(self):
+		if self.deactivating:
+			self.deactivating = False
+			self.active = False
+			self.cooldown_time = 3
+			self.reset_animation = True
+
+	def calculate_pellet_velocity(self, angle):
+		shoot_speed = 1
+		radians = math.radians(angle)
+		vx = shoot_speed * math.cos(radians)
+		vy = shoot_speed * math.sin(radians)
+
+		return Vector2(vx, vy)
+
+	def shoot(self):
+		if self.direction == 1:
+			angles = [45, 90, 135, 180, 360]
+		else:
+			angles = [180, 225, 270, 315, 360]
+
+		p = self.position
+		for angle in angles:
+			v = calculate_velocity(self.pellet_speed, angle)
+			pellet = Pellet(self.pellet_image, self.view, self.damage, v, p.x, p.y)
+			self.enemies.shoot(pellet)
+
+		self.shots += 1
+		if self.shots == 2:
+			self.start_deactivating()
+
+		self.sounds.play_sound('eshoot')
+
+	def react(self, delta):
+		if not self.active and self.cooldown_time > 0:
+			return
+
+		view = self.view
+		ppos = self.player.get_position()
+		pos = self.get_position()
+
+		if abs(pos.x - ppos.x) <= 75 and not self.active and not self.deactivating:
+			self.activate()
+
+	def update(self, delta):
+		super().update(delta)
+
+		if self.cooldown_time > 0:
+			self.cooldown_time -= delta
+
+		if self.dead:
+			self.enemies.kill(self)
+		else:
+			if self.active:
+				inactive_offset = 0
+				animation = self.animations['active_down'] if self.direction == 1 else self.animations['active_up']
+			else:
+				inactive_offset = -1 if self.direction == 1 else 9
+				animation = self.animations['inactive_down'] if self.direction == 1 else self.animations['inactive_up']
+
+			if self.reset_animation:
+				animation.reset()
+				self.reset_animation = False
+
+			self.current_time += delta
+			if self.current_time >= animation.next_time:
+				prev_center = self.rect.center
+				self.image = animation.next(0)['image']
+				self.rect.width = self.image.get_rect().width
+				self.rect.center = prev_center
+				self.current_time = 0
+
+			p = self.position
+			view = self.view
+			offset = view.get_offset()
+			self.rect.center = int(p.x - offset.x), int(p.y - offset.y + inactive_offset)
+
+class OrangeScrewDriver(ScrewDriver):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			active_up=Animation([
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1), callback=self.shoot),
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1), callback=self.deactivate),
+			]),
+			inactive_up=Animation([
+				dict(duration=0.1, image=image_at(Rect((416, 95), (16, 8)), colorkey=-1)),
+			]),
+			active_down=Animation([
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y'), callback=self.shoot),
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
+				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y'), callback=self.deactivate),
+			]),
+			inactive_down=Animation([
+				dict(duration=0.1, image=image_at(Rect((416, 95), (16, 8)), colorkey=-1, flip='y')),
+			]),
+		)
+
+		self.pellet_image = image_at(Rect((281, 96), (6, 6)), colorkey=-1)
+
+		start_frame = self.animations['inactive_down'].current() if self.direction == 1 else self.animations['inactive_up'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
 
 
 class Blaster(Enemy):
@@ -429,7 +575,6 @@ class Blaster(Enemy):
 
 	def shoot(self):
 		v = calculate_velocity(self.pellet_speed, self.angles.pop())
-		# v = self.calculate_pellet_velocity(self.angles.pop())
 		p = self.position
 		pellet = Pellet(self.pellet_image, self.view, self.damage, v, p.x, p.y)
 		self.enemies.shoot(pellet)
@@ -526,19 +671,19 @@ class BlueBlaster(Blaster):
 				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1), callback=self.close_and_deactivate),
 			]),
 			shoot_right=Animation([
-				dict(duration=1.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip=True), callback=self.set_closed),
-				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip=True), callback=self.set_open),
-				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip=True)),
-				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), colorkey=-1, flip=True), callback=self.start_shooting),
-				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip=True)),
-				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip=True)),
-				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip=True), callback=self.close_and_deactivate),
+				dict(duration=1.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.set_closed),
+				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.set_open),
+				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip='x')),
+				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.start_shooting),
+				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip='x')),
+				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip='x')),
+				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.close_and_deactivate),
 			]),
 			still_left=Animation([
 				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1)),
 			]),
 			still_right=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip='x')),
 			])
 		)
 
@@ -564,19 +709,19 @@ class RedBlaster(Blaster):
 				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1), callback=self.close_and_deactivate),
 			]),
 			shoot_right=Animation([
-				dict(duration=1.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip=True), callback=self.set_closed),
-				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip=True), callback=self.set_open),
-				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip=True)),
-				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), colorkey=-1, flip=True), callback=self.start_shooting),
-				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip=True)),
-				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip=True)),
-				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip=True), callback=self.close_and_deactivate),
+				dict(duration=1.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.set_closed),
+				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.set_open),
+				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip='x')),
+				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.start_shooting),
+				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip='x')),
+				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip='x')),
+				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.close_and_deactivate),
 			]),
 			still_left=Animation([
 				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1)),
 			]),
 			still_right=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip=True)),
+				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip='x')),
 			])
 		)
 
@@ -624,8 +769,8 @@ class Cutter(Enemy):
 				dict(duration=0.1, image=image_at(Rect((176, 12), (16, 20)), colorkey=-1)),
 			]),
 			move_right=Animation([
-				dict(duration=0.1, image=image_at(Rect((216, 9), (16, 20)), colorkey=-1, flip=True)),
-				dict(duration=0.1, image=image_at(Rect((176, 12), (16, 20)), colorkey=-1, flip=True)),
+				dict(duration=0.1, image=image_at(Rect((216, 9), (16, 20)), colorkey=-1, flip='x')),
+				dict(duration=0.1, image=image_at(Rect((176, 12), (16, 20)), colorkey=-1, flip='x')),
 			])
 		)
 
@@ -1157,14 +1302,14 @@ class RedBigEye(BigEye):
 				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1), callback=self.jump),
 			]),
 			compressed_right=Animation([
-				dict(duration=0.75, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip=True)),
-				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip=True), callback=self.jump),
+				dict(duration=0.75, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip='x')),
+				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip='x'), callback=self.jump),
 			]),
 			uncompressed_left=Animation([
 				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1)),
 			]),
 			uncompressed_right=Animation([
-				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1, flip=True)),
+				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1, flip='x')),
 			]),
 		)
 
@@ -1185,6 +1330,7 @@ ENEMY_CLASS=dict(
 	orangeoctobattery = OrangeOctoBattery,
 	mambu = Mambu,
 	redbigeye = RedBigEye,
+	orangescrewdriver = OrangeScrewDriver,
 )
 
 class Enemies:

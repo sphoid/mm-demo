@@ -10,6 +10,7 @@ from .enemy import *
 from .item import *
 from .hazards import Hazards
 from .gate import Gates
+from .zone import *
 
 class Stage:
 	def __init__(self, config, loader, spritesheet_loader, view, sounds, explosions):
@@ -70,7 +71,7 @@ class Stage:
 
 		for obj in self.map.get_layer_by_name('zones'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
-			self.zones[obj.name] = GameObject(Rect((x, y), (width, height)), name=obj.name)
+			self.zones[obj.name] = Zone(Rect((x, y), (width, height)), obj.name, **obj.properties)
 			print('LOAD: Zone %d,%d %dx%d'%(x, y, width, height))
 
 		if self.debug['start_zone'] is not None:

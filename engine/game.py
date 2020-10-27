@@ -318,19 +318,17 @@ class Game:
 
 	def update_zone(self):
 		player = self.player
+		zone = self.stage.get_zone()
+		in_zone = self.stage.in_zone(self.player)
 
-		if player.is_climbing() or (player.is_falling()):
-			zone = self.stage.get_zone()
-			in_zone = self.stage.in_zone(self.player)
+		if not in_zone or not zone:
+			return
 
-			if not in_zone or not zone:
-				return
+		if player.is_falling() and in_zone.get_position().y < zone.get_position().y:
+			return
 
-			if player.is_falling() and in_zone.get_position().y < zone.get_position().y:
-				return
-
-			if zone.get_name() != in_zone.get_name():
-				self.transition_zones(zone, in_zone)
+		if zone.get_name() != in_zone.get_name():
+			self.transition_zones(zone, in_zone)
 
 	def update_scrolling(self):
 		view = self.view
@@ -455,13 +453,18 @@ class Game:
 		sprites = self.sprites
 		screen = self.screen
 		stage = self.stage
+		zone = stage.get_zone()
 		enemies = stage.get_enemies()
 		items = stage.get_items()
 		gates = stage.get_gates()
 		hud = self.hud
 		view = self.view
 
-		background_color = stage.get_background_color()
+		background_color = zone.get_background_color()
+		# print('zone background color %r'%background_color)
+		if background_color is None:
+			background_color = stage.get_background_color()
+			# print('stage background color %r'%background_color)
 
 		buffer.fill(background_color)
 

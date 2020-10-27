@@ -66,7 +66,7 @@ class Weapon:
 		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
 		image_at = self.spritesheet.image_at
 
-		self.pellet_image = image_at(Rect((0, 0), (14, 10)), -1)
+		self.pellet_image = image_at(Rect((3, 2), (8, 6)), colorkey=-1)
 
 	def get_spritesheet_filename(self):
 		return 'weapon-sprites.png'

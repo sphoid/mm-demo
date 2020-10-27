@@ -55,7 +55,6 @@ class Gate(GameObject):
 		for col in range(0, xtiles):
 			for row in range(0, ytiles):
 				xpos, ypos = p.x + (col * 16), p.y + (row * 16)
-				print('Loading gate sprite %d,%d'%(xpos, ypos))
 				self.gate_sprite_group.add(GateSprite(self.image, self.view, self, xpos, ypos))
 
 	def is_locked(self):
@@ -63,7 +62,6 @@ class Gate(GameObject):
 
 	def open(self):
 		if not self.opening:
-			print('Opening gate')
 			self.opening = True
 			self.animation_time = 0
 

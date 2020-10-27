@@ -69,14 +69,14 @@ class Player(Entity):
 				dict(duration=0.1, image=image_at(Rect((25, 8), (24, 24)), -1))
 			]),
 			still_right=Animation([
-				dict(duration=2, image=image_at(Rect((0, 8), (24, 24)), -1, flip=True)),
-				dict(duration=0.1, image=image_at(Rect((25, 8), (24, 24)), -1, flip=True))
+				dict(duration=2, image=image_at(Rect((0, 8), (24, 24)), -1, flip='x')),
+				dict(duration=0.1, image=image_at(Rect((25, 8), (24, 24)), -1, flip='x'))
 			]),
 			still_shoot_left=Animation([
 				dict(duration=0.2, image=image_at(Rect((291, 8), (32, 24)), -1))
 			]),
 			still_shoot_right=Animation([
-				dict(duration=0.2, image=image_at(Rect((291, 8), (32, 24)), -1, flip=True))
+				dict(duration=0.2, image=image_at(Rect((291, 8), (32, 24)), -1, flip='x'))
 			]),
 			walk_left=Animation([
 				dict(duration=0.1, image=image_at(Rect((80, 8), (24, 24)), -1)),
@@ -89,30 +89,30 @@ class Player(Entity):
 				dict(duration=0.1, image=image_at(Rect((390, 8), (32, 24)), -1)),
 			]),
 			walk_right=Animation([
-				dict(duration=0.1, image=image_at(Rect((80, 8), (24, 24)), -1, flip=True)),
-				dict(duration=0.1, image=image_at(Rect((108, 8), (24, 24)), -1, flip=True)),
-				dict(duration=0.1, image=image_at(Rect((133, 8), (24, 24)), -1, flip=True))
+				dict(duration=0.1, image=image_at(Rect((80, 8), (24, 24)), -1, flip='x')),
+				dict(duration=0.1, image=image_at(Rect((108, 8), (24, 24)), -1, flip='x')),
+				dict(duration=0.1, image=image_at(Rect((133, 8), (24, 24)), -1, flip='x'))
 			]),
 			walk_right_shoot=Animation([
-				dict(duration=0.1, image=image_at(Rect((324, 8), (32, 24)), -1, flip=True)),
-				dict(duration=0.1, image=image_at(Rect((357, 8), (32, 24)), -1, flip=True)),
-				dict(duration=0.1, image=image_at(Rect((390, 8), (32, 24)), -1, flip=True)),
+				dict(duration=0.1, image=image_at(Rect((324, 8), (32, 24)), -1, flip='x')),
+				dict(duration=0.1, image=image_at(Rect((357, 8), (32, 24)), -1, flip='x')),
+				dict(duration=0.1, image=image_at(Rect((390, 8), (32, 24)), -1, flip='x')),
 			]),
 			climb_still_right=Animation([
 				dict(duration=0, image=image_at(Rect((224, 0), (16, 32)), -1)),
 			]),
 			climb_still_left=Animation([
-				dict(duration=0, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True)),
+				dict(duration=0, image=image_at(Rect((224, 0), (16, 32)), -1, flip='x')),
 			]),
 			climb_shoot_left=Animation([
 				dict(duration=0, image=image_at(Rect((456, 0), (24, 32)), -1)),
 			]),
 			climb_shoot_right=Animation([
-				dict(duration=0, image=image_at(Rect((456, 0), (24, 32)), -1, flip=True)),
+				dict(duration=0, image=image_at(Rect((456, 0), (24, 32)), -1, flip='x')),
 			]),
 			climb=Animation([
 				dict(duration=0.2, image=image_at(Rect((224, 0), (16, 32)), -1), callback=self.set_direction_right),
-				dict(duration=0.2, image=image_at(Rect((224, 0), (16, 32)), -1, flip=True), callback=self.set_direction_left),
+				dict(duration=0.2, image=image_at(Rect((224, 0), (16, 32)), -1, flip='x'), callback=self.set_direction_left),
 			]),
 			climb_over=Animation([
 				dict(duration=0, image=image_at(Rect((241, 8), (16, 24)), -1)),
@@ -124,10 +124,10 @@ class Player(Entity):
 				dict(duration=0, image=image_at(Rect((423, 0), (32, 32)), -1))
 			]),
 			jump_right=Animation([
-				dict(duration=0, image=image_at(Rect((194, 0), (26, 30)), -1, flip=True))
+				dict(duration=0, image=image_at(Rect((194, 0), (26, 30)), -1, flip='x'))
 			]),
 			jump_right_shoot=Animation([
-				dict(duration=0, image=image_at(Rect((423, 0), (32, 32)), -1, flip=True))
+				dict(duration=0, image=image_at(Rect((423, 0), (32, 32)), -1, flip='x'))
 			]),
 			warp=Animation([
 				dict(duration=0, image=image_at(Rect((670, 0), (8, 32)), -1))
@@ -141,8 +141,8 @@ class Player(Entity):
 				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1), callback=self.recover)
 			]),
 			damaged_right=Animation([
-				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True)),
-				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1, flip=True), callback=self.recover)
+				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1, flip='x')),
+				dict(duration=0.25, image=image_at(Rect((258, 0), (32, 32)), -1, flip='x'), callback=self.recover)
 			])
 		)
 

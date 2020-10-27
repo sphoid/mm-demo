@@ -2,10 +2,11 @@ from pygame.sprite import Rect
 from pygame.math import Vector2
 
 class GameObject:
-	def __init__(self, rect, name=None):
+	def __init__(self, rect, name=None, attributes=dict()):
 		self.name = name
 		self.rect = rect
 		self.flagged = False
+		self.attributes = attributes
 
 	def is_flagged(self):
 		return self.flagged

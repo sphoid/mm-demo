@@ -17,8 +17,10 @@ class SpriteSheet:
 					colorkey = image.get_at((0,0))
 				image.set_colorkey(colorkey, RLEACCEL)
 
-		if flip:
+		if flip == 'x':
 			image = transform.flip(image, True, False)
+		elif flip == 'y':
+			image = transform.flip(image, False, True)
 
 		if scale2x:
 			image = transform.scale2x(image)
