@@ -1,6 +1,3 @@
 __pycache__
 engine/__pycache__
-data/fonts/*.ttf
-data/images/*.png
-data/music/*.mp3
-data/sounds/*.wav
+data/*
