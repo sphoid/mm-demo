@@ -15,8 +15,6 @@ from .zone import *
 class Stage:
 	def __init__(self, config, loader, spritesheet_loader, view, sounds, explosions):
 		self.config = config
-		self.tile_height = 32
-		self.tile_width = 32
 		self.loader = loader
 		self.spritesheet_loader = spritesheet_loader
 		self.player = None
@@ -27,17 +25,12 @@ class Stage:
 		self.ladders = {}
 		self.platforms = {}
 		self.hazards = {}
-		self.items = {}
-		self.gates = {}
-		self.tile_sprite_group = sprite.Group()
-		self.enemies = None
 		self.items = None
+		self.gates = None
+		self.enemies = None
 		self.explosions = explosions
+		self.tile_sprite_group = sprite.Group()
 		self.enemy_sprite_group = sprite.Group()
-		self.scroll_offset_x = 0
-		self.scroll_offset_y = 0
-		self.area = Rect(0, 0, round(SCREEN_W / 2), round(SCREEN_H / 2))
-		self.center = self.area.width / 2
 		self.map_size = None
 		self.sounds = sounds
 		self.music_track = None
@@ -59,7 +52,27 @@ class Stage:
 
 		map_debug = self.debug['map_debug']
 
-		if not map_debug:
+		self.load_tiles()
+		self.load_zones()
+		self.load_platforms()
+		self.load_ladders()
+		self.load_hazards()
+		self.load_gates()
+		self.load_items()
+		self.load_enemies()
+
+		# set landing zone
+		for obj in self.map.get_layer_by_name('player'):
+			x, y = int(obj.x), int(obj.y)
+			if obj.type == 'start':
+				self.warp_start_position = Vector2(x, y)
+			elif obj.type == 'land':
+				self.warp_land_position = Vector2(x, y)
+
+		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
+
+	def load_tiles(self):
+		if not self.debug['map_debug']:
 			for x, y, image in self.map.get_layer_by_name('tiles').tiles():
 				rect = image.get_rect()
 				width, height = rect.width, rect.height
@@ -68,6 +81,7 @@ class Stage:
 				self.tiles[x, y] = tile
 				self.tile_sprite_group.add(tile)
 
+	def load_zones(self):
 		for obj in self.map.get_layer_by_name('zones'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.zones[obj.name] = Zone(Rect((x, y), (width, height)), obj.name, **obj.properties)
@@ -80,50 +94,56 @@ class Stage:
 		self.zone = self.zones[zone_name]
 		self.view.set_offset(self.zone.get_position())
 
+	def load_platforms(self):
 		for obj in self.map.get_layer_by_name('platforms'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.platforms[x, y] = GameObject(Rect((x, y), (width, height)))
 
+	def get_platforms(self):
+		return self.platforms.values()
+
+	def load_ladders(self):
 		for obj in self.map.get_layer_by_name('ladders'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.ladders[x, y] = GameObject(Rect((x, y), (width, height)))
 
+	def get_ladders(self):
+		return self.ladders.values()
+
+	def load_hazards(self):
 		for obj in self.map.get_layer_by_name('hazards'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.hazards[x, y] = Hazards.load(obj.type, Rect((x, y), (width, height)))
 
+	def get_hazards(self):
+		return self.hazards.values()
+
+	def load_gates(self):
 		self.gates = Gates(self.spritesheet_loader, self.sounds, self.view)
 		for obj in self.map.get_layer_by_name('gates'):
 			x, y, width, height = int(obj.x), int(obj.y), int(obj.width), int(obj.height)
 			self.gates.load(x, y, width, height)
 
-		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self, self.explosions)
-		for obj in self.map.get_layer_by_name('enemies'):
-			x, y = int(obj.x), int(obj.y)
-			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
+	def get_gates(self):
+		return self.gates
 
-		for obj in self.map.get_layer_by_name('player'):
-			x, y = int(obj.x), int(obj.y)
-			if obj.type == 'start':
-				self.warp_start_position = Vector2(x, y)
-			elif obj.type == 'land':
-				self.warp_land_position = Vector2(x, y)
-
+	def load_items(self):
 		self.items = Items(self.spritesheet_loader, self.sounds, self.view)
 		for obj in self.map.get_layer_by_name('items'):
 			x, y = int(obj.x), int(obj.y)
 			self.items.load(obj.type, x, y)
 
-		print('Loaded map grid_size=%dx%d size=%dx%d' % (self.map.width, self.map.height, self.map_size[0], self.map_size[1]))
+	def get_items(self):
+		return self.items
 
-	def get_platforms(self):
-		return self.platforms.values()
+	def load_enemies(self):
+		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self, self.explosions)
+		for obj in self.map.get_layer_by_name('enemies'):
+			x, y = int(obj.x), int(obj.y)
+			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
 
-	def get_ladders(self):
-		return self.ladders.values()
-
-	def get_hazards(self):
-		return self.hazards.values()
+	def get_enemies(self):
+		return self.enemies
 
 	def get_music_track(self):
 		return self.music_track
@@ -146,6 +166,30 @@ class Stage:
 		elif len(colliding_zones) > 1:
 			next_zone = list(filter((lambda zone: zone.get_name() != self.zone.get_name()), colliding_zones))[0]
 			return next_zone
+
+	def get_zone_size(self):
+		return self.zone.get_size()
+
+	def get_map_size(self):
+		return self.map_size
+
+	def get_map_width(self):
+		return self.map_size[0]
+
+	def get_map_height(self):
+		return self.map_size[1]
+
+	def get_background_color(self):
+		return hex_to_rgb(self.map.background_color)
+
+	def get_warp_start_position(self):
+		return self.warp_start_position
+
+	def get_warp_land_position(self):
+		return self.warp_land_position
+
+	def get_view(self):
+		return self.view
 
 	def platform_left_adjacent(self, rect):
 		test_rect = Rect((rect.left - 1, rect.top), (rect.width, rect.height))
@@ -175,39 +219,6 @@ class Stage:
 		colliding_ladders = list(filter((lambda ladder: rect.colliderect(ladder.rect)), self.ladders.values()))
 
 		return colliding_ladders[0] if len(colliding_ladders) > 0 else None
-
-	def get_background_color(self):
-		return hex_to_rgb(self.map.background_color)
-
-	def get_warp_start_position(self):
-		return self.warp_start_position
-
-	def get_warp_land_position(self):
-		return self.warp_land_position
-
-	def get_zone_size(self):
-		return self.zone.get_size()
-
-	def get_map_size(self):
-		return self.map_size
-
-	def get_map_width(self):
-		return self.map_size[0]
-
-	def get_map_height(self):
-		return self.map_size[1]
-
-	def get_view(self):
-		return self.view
-
-	def get_enemies(self):
-		return self.enemies
-
-	def get_items(self):
-		return self.items
-
-	def get_gates(self):
-		return self.gates
 
 	def update(self, delta):
 		self.tile_sprite_group.update(delta)

@@ -31,6 +31,15 @@ class Game:
 		self.player_dead = False
 		self.entering_gate = None
 
+		self.player = None
+		self.ladders = None
+		self.items = None
+		self.platforms = None
+		self.hazards = None
+		self.gates = None
+		self.enemies = None
+		self.warp_start_position = None
+		self.warp_land_position = None
 		self.explosions = Explosions(self.spritesheet_loader)
 
 		self.debug = self.config.get_debug()
@@ -41,6 +50,16 @@ class Game:
 
 	def init_stage(self):
 		self.stage = Stage(self.config, self.loader, self.spritesheet_loader, self.view, self.sounds, self.explosions)
+
+		self.platforms = self.stage.get_platforms()
+		self.ladders = self.stage.get_ladders()
+		self.hazards = self.stage.get_hazards()
+		self.items = self.stage.get_items()
+		self.gates = self.stage.get_gates()
+		self.enemies = self.stage.get_enemies()
+		self.warp_start_position = self.stage.get_warp_start_position()
+		self.warp_land_position = self.stage.get_warp_land_position()
+
 		self.music_player.play(self.stage.get_music_track())
 
 	def init_player(self):
@@ -51,7 +70,7 @@ class Game:
 			pos = self.debug['start_position']
 			self.player.set_position(pos[0], pos[1])
 		else:
-			self.player.warp(self.stage.get_warp_start_position())
+			self.player.warp(self.warp_start_position)
 
 	def init_hud(self):
 		self.life_meter = LifeMeter(self.spritesheet_loader, self.sounds, self.player)
@@ -59,8 +78,8 @@ class Game:
 
 	def check_collision(self, entity, recursion=False):
 		collided = False
-		colliding_platforms = list(filter((lambda platform: platform.collides_with(entity.get_rect())), self.stage.get_platforms()))
-		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(entity.get_rect())), self.stage.get_ladders()))
+		colliding_platforms = list(filter((lambda platform: platform.collides_with(entity.get_rect())), self.platforms))
+		colliding_ladders = list(filter((lambda ladder: ladder.collides_with(entity.get_rect())), self.ladders))
 
 		v = entity.get_velocity()
 		p = entity.get_position()
@@ -109,18 +128,18 @@ class Game:
 			return
 
 		if player.is_warping():
-			lp = stage.get_warp_land_position()
+			lp = self.warp_land_position
 			if player.get_bottom() >= lp.y:
 				player.arrive(lp.y)
 			return
 
-		colliding_hazards = list(filter((lambda hazard: hazard.collides_with(player.get_rect())), stage.get_hazards()))
+		colliding_hazards = list(filter((lambda hazard: hazard.collides_with(player.get_rect())), self.hazards))
 		if len(colliding_hazards) > 0:
 			p = player.get_position()
 			hazard = colliding_hazards[0]
 			player.damage(hazard.get_damage())
 
-		colliding_gates = list(filter((lambda gate: gate.collides_with(player.get_rect())), self.stage.get_gates().get_gates()))
+		colliding_gates = list(filter((lambda gate: gate.collides_with(player.get_rect())), self.gates.get_gates()))
 		if len(colliding_gates) > 0:
 			gate = colliding_gates[0]
 			if not gate.is_locked():
@@ -152,12 +171,12 @@ class Game:
 				player.collide_right(offset.x + zw)
 
 		if not player.is_damaged() and not player.is_invincible():
-			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), stage.get_enemies().get_enemies()))
+			colliding_enemies = list(filter((lambda enemy: enemy.collides_with(player.get_rect())), self.enemies.get_enemies()))
 			if len(colliding_enemies) > 0:
 				enemy = colliding_enemies[0]
 				player.damage(enemy.get_damage())
 
-		collided_items = list(filter((lambda item: item.collides_with(player.get_rect())), stage.get_items().get_items()))
+		collided_items = list(filter((lambda item: item.collides_with(player.get_rect())), self.items.get_items()))
 		for item in collided_items:
 			item.use(player)
 
@@ -199,7 +218,7 @@ class Game:
 
 	def check_weapon_hits(self):
 		weapon = self.player.get_weapon()
-		enemies = self.stage.get_enemies().get_enemies()
+		enemies = self.enemies.get_enemies()
 		weapon.check_hits(enemies)
 
 	def apply_gravity(self, entity):
@@ -330,7 +349,7 @@ class Game:
 
 	def update_enemies(self, delta):
 		stage, player = self.stage, self.player
-		enemies = stage.get_enemies()
+		enemies = self.enemies
 
 		for enemy in enemies.get_enemies():
 			self.apply_gravity(enemy)
@@ -344,16 +363,10 @@ class Game:
 		enemies.update(delta)
 
 	def update_items(self, delta):
-		stage = self.stage
-		items = stage.get_items()
-
-		items.update(delta)
+		self.items.update(delta)
 
 	def update_gates(self, delta):
-		stage = self.stage
-		gates = stage.get_gates()
-
-		gates.update(delta)
+		self.gates.update(delta)
 
 	def update_player(self, delta):
 		player = self.player
@@ -420,9 +433,6 @@ class Game:
 		screen = self.screen
 		stage = self.stage
 		zone = stage.get_zone()
-		enemies = stage.get_enemies()
-		items = stage.get_items()
-		gates = stage.get_gates()
 		hud = self.hud
 		view = self.view
 
@@ -433,9 +443,9 @@ class Game:
 		buffer.fill(background_color)
 
 		stage.draw(buffer)
-		enemies.draw(buffer)
-		items.draw(buffer)
-		gates.draw(buffer)
+		self.enemies.draw(buffer)
+		self.items.draw(buffer)
+		self.gates.draw(buffer)
 
 		if self.debug['player_debug']:
 			player = self.player
