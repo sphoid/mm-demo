@@ -1,6 +1,7 @@
 from .constants import *
 from .util import *
 from .logger import *
+from .input import *
 from .loader import *
 from .animation import *
 from .sprite import *

@@ -50,3 +50,8 @@ class MusicPlayer:
 	def stop(self):
 		mixer.music.stop()
 
+	def pause(self):
+		mixer.music.pause()
+
+	def unpause(self):
+		mixer.music.unpause()

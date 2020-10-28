@@ -27,6 +27,7 @@ class GameLoop:
 		self.logger = logger
 		self.loader = loader
 		self.mode = None
+		self.paused = False
 		self.clock = Clock()
 		self.debug = dict(map_debug=MAP_DEBUG, player_debug=PLAYER_DEBUG, start_zone=DEBUG_START_ZONE, start_position=DEBUG_START_POSITION)
 
@@ -42,8 +43,20 @@ class GameLoop:
 		self.sounds.load()
 		self.music_player = MusicPlayer(self.loader)
 
+	def init_input(self):
+		self.input = KeyboardInput()
+
 	def quit(self):
 		self.running = False
+
+	def is_paused(self):
+		return self.paused
+
+	def pause(self):
+		self.paused = True
+
+	def unpause(self):
+		self.paused = False
 
 	def loop(self):
 		self.running = True
@@ -55,20 +68,24 @@ class GameLoop:
 					self.mode.handle_event(event)
 
 			if self.running:
-				delta = self.clock.tick(FPS) / 1000
-				self.mode.update(delta)
+				if not self.paused:
+					delta = self.clock.tick(FPS) / 1000
+					self.mode.update(delta)
 				self.mode.render()
 
 	def set_mode(self, mode_id):
 		self.init_screen()
 		self.init_audio()
+		self.init_input()
+
+		pygame.event.clear()
 
 		if mode_id == MODE_MENU:
-			self.mode = Menu(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
+			self.mode = Menu(self.logger, self.input, self.loader, self.screen, self.sounds, self.music_player, self)
 		elif mode_id == MODE_GAME:
-			self.mode = Game(self.config, self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
+			self.mode = Game(self.config, self.logger, self.input, self.loader, self.screen, self.sounds, self.music_player, self)
 		elif mode_id == MODE_GAME_OVER:
-			self.mode = GameOver(self.logger, self.loader, self.screen, self.sounds, self.music_player, self)
+			self.mode = GameOver(self.logger, self.input, self.loader, self.screen, self.sounds, self.music_player, self)
 
 	def start(self):
 		if self.mode is None:

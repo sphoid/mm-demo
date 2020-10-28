@@ -4,9 +4,10 @@ from pygame.sprite import Rect
 from .constants import *
 
 class Menu:
-	def __init__(self, logger, loader, screen, sounds, music_player, game, **opts):
+	def __init__(self, logger, input, loader, screen, sounds, music_player, game, **opts):
 		self.logger = logger
 		self.screen = screen
+		self.input = input
 		self.buffer = Surface((int(SCREEN_W), int(SCREEN_H)))
 		self.loader = loader
 		self.game = game
@@ -56,15 +57,19 @@ class Menu:
 
 		screen.blit(buffer, buffer.get_rect())
 
-		# screen.blit(title_text, title_rect)
-		# screen.blit(prompt_text, prompt_rect)
-
 		display.flip()
 
+	def start_game(self):
+		self.sounds.play_sound('start', True)
+		self.game.set_mode(MODE_GAME)
+
+	def quit_game(self):
+		self.game.quit()
+
 	def handle_event(self, event):
-		if event.type in (pygame.KEYDOWN, pygame.KEYUP):
-			if event.key == pygame.K_RETURN:
-				self.sounds.play_sound('start', True)
-				self.game.set_mode(MODE_GAME)
-			elif event.key == pygame.K_ESCAPE:
-				self.game.quit()
+		input = self.input
+		if input.is_pressed(event) or input.is_released(event):
+			if input.is_start(event):
+				self.start_game()
+			elif input.is_cancel(event):
+				self.quit_game()

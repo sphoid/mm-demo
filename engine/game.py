@@ -9,10 +9,11 @@ from .hud import *
 from .view import *
 
 class Game:
-	def __init__(self, config, logger, loader, screen, sounds, music_player, game):
+	def __init__(self, config, logger, input, loader, screen, sounds, music_player, game):
 		self.logger = logger
 		self.config = config
 		self.screen = screen
+		self.input = input
 		self.buffer = pygame.Surface((int(SCREEN_W / SCALE_FACTOR), int(SCREEN_H / SCALE_FACTOR)))
 		self.loader = loader
 		self.sounds = sounds
@@ -466,63 +467,138 @@ class Game:
 
 		display.flip()
 
-	def handle_event(self, event):
+	# Player Events
+
+	def player_start_right(self):
 		player = self.player
-		debug = self.logger.debug
-		if event.type in (pygame.KEYDOWN, pygame.KEYUP):
-			if player.is_dead():
+		if not player.is_climbing() and player.is_moveable():
+			player.move_right()
+		elif player.is_climbing():
+			player.set_direction_right()
+
+	def player_stop_right(self):
+		player = self.player
+		if player.get_velocity().x > 0:
+			player.stop_x()
+
+	def player_start_left(self):
+		player = self.player
+		if not player.is_climbing() and player.is_moveable():
+			player.move_left()
+		elif player.is_climbing():
+			player.set_direction(0)
+
+	def player_stop_left(self):
+		player = self.player
+		if player.get_velocity().x < 0:
+			player.stop_x()
+
+	def player_start_up(self):
+		player = self.player
+		if not player.is_climbing():
+			grabbed = self.grab_ladder_behind(player)
+			if grabbed:
+				player.climb_up()
+		else:
+			player.climb_up()
+
+	def player_stop_up(self):
+		player = self.player
+		if player.is_climbing():
+			player.stop_climbing()
+
+	def player_start_down(self):
+		player = self.player
+		if not player.is_climbing():
+			grabbed = self.grab_ladder_below(player)
+			if grabbed:
+				player.climb_down()
+		else:
+			player.climb_down()
+
+	def player_stop_down(self):
+		player = self.player
+		if player.is_climbing():
+			player.stop_climbing()
+
+	def player_jump(self):
+		player = self.player
+		if not player.is_falling():
+			player.jump()
+
+	def player_start_shoot(self):
+		pew = self.player.shoot()
+		self.sprites.add(pew)
+
+	def player_stop_shoot(self):
+		self.player.stop_shooting()
+
+	def game_pause_unpause(self):
+		if not self.game.is_paused():
+			self.music_player.pause()
+			self.game.pause()
+		else:
+			self.music_player.unpause()
+			self.game.unpause()
+
+	def is_game_paused(self):
+		return self.game.is_paused()
+
+	def game_quit(self):
+		self.game.quit()
+
+	def handle_event(self, event):
+		input = self.input
+
+		if input.is_pressed(event) or input.is_released(event):
+			if self.player.is_dead():
 				return
 
-			if event.key == pygame.K_RIGHT:
-				if event.type == pygame.KEYDOWN:
-					if not player.is_climbing() and player.is_moveable():
-						player.move_right()
-					elif player.is_climbing():
-						player.set_direction_right()
-				elif event.type == pygame.KEYUP:
-					if player.get_velocity().x > 0:
-						player.stop_x()
-			elif event.key == pygame.K_LEFT:
-				if event.type == pygame.KEYDOWN:
-					if not player.is_climbing() and player.is_moveable():
-						player.move_left()
-					elif player.is_climbing():
-						player.set_direction(0)
-				elif event.type == pygame.KEYUP:
-					if player.get_velocity().x < 0:
-						player.stop_x()
-			elif event.key == pygame.K_UP:
-				if event.type == pygame.KEYDOWN:
-					if not player.is_climbing():
-						grabbed = self.grab_ladder_behind(player)
-						if grabbed:
-							player.climb_up()
-					else:
-						player.climb_up()
-				elif event.type == pygame.KEYUP:
-					if player.is_climbing():
-						player.stop_climbing()
-			elif event.key == pygame.K_DOWN:
-				if event.type == pygame.KEYDOWN:
-					if not player.is_climbing():
-						grabbed = self.grab_ladder_below(player)
-						if grabbed:
-							player.climb_down()
-					else:
-						player.climb_down()
-				elif event.type == pygame.KEYUP:
-					if player.is_climbing():
-						player.stop_climbing()
-			elif event.key == pygame.K_SPACE and event.type == pygame.KEYDOWN:
-				if not player.is_falling():
-					player.jump()
-			elif event.key == pygame.K_f:
-				if event.type == pygame.KEYDOWN:
-					pew = player.shoot()
-					self.sprites.add(pew)
-				elif event.type == pygame.KEYUP:
-					player.stop_shooting()
-			elif event.key == pygame.K_ESCAPE:
-				self.game.quit()
+			# Pause
+			if input.is_pause(event) and input.is_released(event):
+				self.game_pause_unpause()
+
+			# Quit
+			elif input.is_cancel(event):
+				self.game_quit()
+
+			else:
+				if self.is_game_paused():
+					return
+
+				# Right
+				if input.is_right(event) and input.is_pressed(event):
+					self.player_start_right()
+				elif input.is_right(event) and input.is_released(event):
+					self.player_stop_right()
+
+				# Left
+				elif input.is_left(event) and input.is_pressed(event):
+					self.player_start_left()
+				elif input.is_left(event) and input.is_released(event):
+					self.player_stop_left()
+
+				# Up
+				elif input.is_up(event) and input.is_pressed(event):
+					self.player_start_up()
+				elif input.is_up(event) and input.is_released(event):
+					self.player_stop_up()
+
+				# Down
+				elif input.is_down(event) and input.is_pressed(event):
+					self.player_start_down()
+				elif input.is_down(event) and input.is_released(event):
+					self.player_stop_down()
+
+				# Jump
+				elif input.is_jump(event) and input.is_pressed(event):
+					self.player_jump()
+
+				# Shoot
+				elif input.is_shoot(event) and input.is_pressed(event):
+					self.player_start_shoot()
+				elif input.is_shoot(event) and input.is_released(event):
+					self.player_stop_shoot()
+
 		elif event.type == PLAYER_DEFEATED:
 			self.game_over()
