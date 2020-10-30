@@ -48,6 +48,7 @@ class Player(Entity):
 
 		self.hit_points = self.max_hit_points
 		self.score = 0
+		self.bonus_points = 0
 
 		self.weapon = Weapon(self.spritesheet_loader, self.sounds, self)
 
@@ -188,6 +189,11 @@ class Player(Entity):
 
 	def add_points(self, points):
 		self.score += points
+
+	def add_bonus_points(self, points):
+		self.bonus_points += points
+
+		self.sounds.play_sound('bonus')
 
 	def get_score(self):
 		return self.score

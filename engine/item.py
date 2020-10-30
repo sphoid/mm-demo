@@ -13,6 +13,8 @@ class Item(Entity):
 		self.current_time = 0
 		self.animation = None
 
+		self.gravity = True
+
 		self.reset_animation = False
 
 		self.load_sprites()
@@ -24,6 +26,8 @@ class Item(Entity):
 		pass
 
 	def update(self, delta):
+		self.update_position(delta)
+
 		self.current_time += delta
 		if self.current_time >= self.animation.next_time:
 			prev_center = self.rect.center
@@ -76,10 +80,34 @@ class SmallHealth(Item):
 		player.heal(6)
 		self.kill()
 
+class BonusPoint(Item):
+	def use(self, player):
+		player.add_bonus_points(1)
+		self.kill()
+
+class RedBonusPoint(BonusPoint):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=2, image=image_at(Rect((5, 35), (8, 8)), alpha=True)),
+			])
+		)
+
+		self.animation = self.animations['default']
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class ExtraLife(Item):
+	pass
 
 ITEM_CLASS=dict(
 	bighealth = BigHealth,
 	smallhealth = SmallHealth,
+	redbonus = RedBonusPoint,
+	extralife = ExtraLife,
 )
 
 class Items:

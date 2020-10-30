@@ -366,6 +366,11 @@ class Game:
 		enemies.update(delta)
 
 	def update_items(self, delta):
+		for item in self.items.get_items():
+			self.apply_gravity(item)
+			if not item.is_clip_enabled():
+				self.check_collision(item)
+
 		self.items.update(delta)
 
 	def update_gates(self, delta):

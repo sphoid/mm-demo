@@ -206,6 +206,12 @@ class Enemy(Entity):
 	def get_damage(self):
 		return self.damage
 
+	def get_random_loot_type(self, number):
+		if number > 2 and number < 50:
+			return 'redbonus'
+
+		return None
+
 	def die(self):
 		self.dead = True
 
@@ -1342,13 +1348,14 @@ ENEMY_CLASS=dict(
 )
 
 class Enemies:
-	def __init__(self, spritesheet_loader, sounds, view, stage, explosions):
+	def __init__(self, spritesheet_loader, sounds, view, stage, explosions, items):
 		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
 		self.view = view
 		self.sounds = sounds
 		self.spawn_range = 50
 		self.enemies = dict()
 		self.explosions = explosions
+		self.items = items
 		self.stage = stage
 		self.enemy_sprite_group = sprite.Group()
 		self.pew_sprite_group = sprite.Group()
@@ -1426,10 +1433,19 @@ class Enemies:
 				player.damage(pew.get_damage())
 				pew.kill()
 
+	def generate_loot(self, enemy):
+		num = random.randint(1, 100)
+		loot_type = enemy.get_random_loot_type(num)
+		if loot_type == None:
+			return
+		pos = enemy.get_position()
+		self.items.load(loot_type, pos.x, pos.y)
+
 	def kill(self, enemy):
 		name = enemy.get_name()
 		self.enemies[name]['count'] -= 1
 		enemy.kill()
+		self.generate_loot(enemy)
 		print('KILL %s count=%d'%(name, self.enemies[name]['count']))
 
 	def check_off_screen(self):

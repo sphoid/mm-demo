@@ -137,7 +137,7 @@ class Stage:
 		return self.items
 
 	def load_enemies(self):
-		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self, self.explosions)
+		self.enemies = Enemies(self.spritesheet_loader, self.sounds, self.view, self, self.explosions, self.items)
 		for obj in self.map.get_layer_by_name('enemies'):
 			x, y = int(obj.x), int(obj.y)
 			self.enemies.load(obj.name, obj.type, x, y, **obj.properties)
