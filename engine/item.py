@@ -100,6 +100,53 @@ class RedBonusPoint(BonusPoint):
 		self.image = start_frame['image']
 		self.rect = self.image.get_rect()
 
+
+class BlueBonusPoint(BonusPoint):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=2, image=image_at(Rect((17, 35), (8, 8)), alpha=True)),
+			])
+		)
+
+		self.animation = self.animations['default']
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class GreenBonusPoint(BonusPoint):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=2, image=image_at(Rect((29, 35), (8, 8)), alpha=True)),
+			])
+		)
+
+		self.animation = self.animations['default']
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+class OrangeBonusPoint(BonusPoint):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=2, image=image_at(Rect((41, 35), (8, 8)), alpha=True)),
+			])
+		)
+
+		self.animation = self.animations['default']
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+
 class ExtraLife(Item):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
@@ -123,6 +170,9 @@ ITEM_CLASS=dict(
 	bighealth = BigHealth,
 	smallhealth = SmallHealth,
 	redbonus = RedBonusPoint,
+	bluebonus = BlueBonusPoint,
+	greenbonus = GreenBonusPoint,
+	orangebonus = OrangeBonusPoint,
 	extralife = ExtraLife,
 )
 
