@@ -89,7 +89,7 @@ class Weapon:
 				for enemy in enemy_sprite_group:
 					hit = enemy.collides_with(pew.get_rect())
 					if hit:
-						enemy.hit(pew)
+						enemy.hit(pew, self.player)
 						pew.kill()
 
 	def update(self, delta):

@@ -15,7 +15,6 @@ class Player(Entity):
 		self.climb_speed = 2
 		self.jump_speed = 8
 		self.max_hit_points = 28
-		self.hit_points = self.max_hit_points
 		self.stage = None
 		self.explosions = explosions
 		self.debug = debug
@@ -47,11 +46,12 @@ class Player(Entity):
 		self.invincible_time = 0
 		self.heal_time = 0
 
+		self.hit_points = self.max_hit_points
+		self.score = 0
+
 		self.weapon = Weapon(self.spritesheet_loader, self.sounds, self)
 
 		self.reset_animation = False
-
-		self.map_size = None
 
 		self.load_sprites()
 
@@ -159,7 +159,6 @@ class Player(Entity):
 
 	def set_stage(self, stage):
 		self.stage = stage
-		self.map_size = stage.get_map_size()
 		self.warp(stage.get_warp_start_position())
 
 	def get_stage(self):
@@ -187,6 +186,11 @@ class Player(Entity):
 
 			self.sounds.play_sound('energy', True)
 
+	def add_points(self, points):
+		self.score += points
+
+	def get_score(self):
+		return self.score
 
 	def get_width(self):
 		return 16

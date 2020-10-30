@@ -58,6 +58,9 @@ class GameLoop:
 	def unpause(self):
 		self.paused = False
 
+	def game_over(self):
+		self.set_mode(MODE_GAME_OVER)
+
 	def loop(self):
 		self.running = True
 		while self.running:

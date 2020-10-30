@@ -18,7 +18,6 @@ class Menu:
 		self.title = 'Game Demo'
 		self.menu_time = 0
 		self.prompt_blinking = False
-		self.area = Rect(0, 0, int(SCREEN_W / 2), int(SCREEN_H / 2))
 
 	def update(self, delta):
 		self.menu_time += delta

@@ -117,6 +117,11 @@ class Enemy(Entity):
 		else:
 			self.damage = self.get_default_damage()
 
+		if 'points' in attributes:
+			self.points = attributes['points']
+		else:
+			self.points = self.get_default_points()
+
 		if 'zone' in attributes:
 			self.zone = attributes['zone']
 		else:
@@ -129,6 +134,7 @@ class Enemy(Entity):
 
 		self.falling = False
 		self.dead = False
+		self.last_hit_by = None
 
 		self.load_sprites()
 
@@ -161,6 +167,9 @@ class Enemy(Entity):
 	def get_default_damage(self):
 		return 1
 
+	def get_default_points(self):
+		return 500
+
 	def load_sprites(self):
 		pass
 
@@ -187,9 +196,10 @@ class Enemy(Entity):
 	def move_up(self):
 		self.accelerate(0, -self.move_speed_y)
 
-	def hit(self, pew):
+	def hit(self, pew, entity):
 		damage = pew.get_damage()
 		self.hit_points -= damage
+		self.last_hit_by = entity
 
 		self.sounds.play_sound('edamage')
 
@@ -204,8 +214,11 @@ class Enemy(Entity):
 
 	def update_status(self):
 		if self.hit_points <= 0:
+			if self.last_hit_by is not None:
+				self.last_hit_by.add_points(self.points)
 			self.enemies.explode(self)
 			self.die()
+
 
 	def check_off_screen(self):
 		pass
@@ -605,9 +618,9 @@ class Blaster(Enemy):
 		elif self.active:
 			self.deactivate()
 
-	def hit(self, pew):
+	def hit(self, pew, entity):
 		if self.open:
-			super().hit(pew)
+			super().hit(pew, entity)
 		else:
 			self.sounds.play_sound('dink')
 
@@ -1171,11 +1184,11 @@ class Mambu(Enemy):
 		vx = -self.move_speed_x if self.direction == 0 else self.move_speed_x
 		self.accelerate(vx, 0)
 
-	def hit(self, pew):
+	def hit(self, pew, entity):
 		if self.moving:
 			self.sounds.play_sound('dink')
 		else:
-			super().hit(pew)
+			super().hit(pew, entity)
 
 	def update(self, delta):
 		super().update(delta)

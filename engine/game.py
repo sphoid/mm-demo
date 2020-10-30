@@ -65,6 +65,7 @@ class Game:
 
 	def init_player(self):
 		self.player = Player(self.spritesheet_loader, self.view, self.sounds, self.explosions, self.debug)
+		self.score = Score(self.loader, self.player)
 		self.sprites.add(self.player)
 
 		if self.debug and self.debug['start_position']:
@@ -75,6 +76,7 @@ class Game:
 
 	def init_hud(self):
 		self.life_meter = LifeMeter(self.spritesheet_loader, self.sounds, self.player)
+		self.score = Score(self.loader, self.player)
 		self.hud = HudGroup([self.life_meter])
 
 	def check_collision(self, entity, recursion=False):
@@ -425,9 +427,6 @@ class Game:
 		hud.update(delta)
 		explosions.update(delta)
 
-	def game_over(self):
-		self.game.set_mode(MODE_GAME_OVER)
-
 	def render(self):
 		buffer = self.buffer
 		sprites = self.sprites
@@ -457,7 +456,9 @@ class Game:
 		else:
 			sprites.draw(buffer)
 
+		self.score.draw(buffer)
 		hud.draw(buffer)
+
 		self.explosions.draw(buffer)
 
 		if SCALE_FACTOR > 1:
@@ -543,6 +544,9 @@ class Game:
 
 	def is_game_paused(self):
 		return self.game.is_paused()
+
+	def game_over(self):
+		self.game.game_over()
 
 	def game_quit(self):
 		self.game.quit()
