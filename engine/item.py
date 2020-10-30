@@ -101,7 +101,23 @@ class RedBonusPoint(BonusPoint):
 		self.rect = self.image.get_rect()
 
 class ExtraLife(Item):
-	pass
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+
+		self.animations = dict(
+			default=Animation([
+				dict(duration=2, image=image_at(Rect((193, 26), (16, 16)), alpha=True)),
+			])
+		)
+
+		self.animation = self.animations['default']
+		start_frame = self.animations['default'].current()
+		self.image = start_frame['image']
+		self.rect = self.image.get_rect()
+
+	def use(self, player):
+		player.add_life()
+		self.kill()
 
 ITEM_CLASS=dict(
 	bighealth = BigHealth,

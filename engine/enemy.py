@@ -209,6 +209,8 @@ class Enemy(Entity):
 	def get_random_loot_type(self, number):
 		if number > 2 and number < 50:
 			return 'redbonus'
+		elif number <= 2:
+			return 'extralife'
 
 		return None
 

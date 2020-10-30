@@ -21,6 +21,7 @@ class SoundLibrary:
 			dink=load_sound('dink.wav', self.mixer),
 			energy=load_sound('energyfill.wav', self.mixer),
 			bonus=load_sound('bonusball.wav', self.mixer),
+			extralife=load_sound('1up.wav', self.mixer),
 		)
 
 	def play_sound(self, sound, blocking=False, end_event=None):

@@ -15,6 +15,7 @@ class Player(Entity):
 		self.climb_speed = 2
 		self.jump_speed = 8
 		self.max_hit_points = 28
+		self.max_lives = 3
 		self.stage = None
 		self.explosions = explosions
 		self.debug = debug
@@ -49,6 +50,7 @@ class Player(Entity):
 		self.hit_points = self.max_hit_points
 		self.score = 0
 		self.bonus_points = 0
+		self.lives = self.max_lives
 
 		self.weapon = Weapon(self.spritesheet_loader, self.sounds, self)
 
@@ -197,6 +199,11 @@ class Player(Entity):
 
 	def get_score(self):
 		return self.score
+
+	def add_life(self):
+		self.lives += 1
+
+		self.sounds.play_sound('extralife')
 
 	def get_width(self):
 		return 16
