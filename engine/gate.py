@@ -6,11 +6,10 @@ from .entity import *
 
 class GateSprite(Entity):
 	def __init__(self, image, view, gate, *position):
-		super().__init__(view)
+		super().__init__(view=view, position=(position[0], position[1]))
 		self.image = image
 		self.rect = image.get_rect()
 		self.gate = gate
-		self.position = Vector2(position[0], position[1])
 
 	def update(self, delta):
 		p = self.position

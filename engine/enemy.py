@@ -61,23 +61,25 @@ class Pellet(sprite.Sprite):
 
 class Enemy(Entity):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
-		super().__init__()
 		self.name = name
-		self.spritesheet = spritesheet
 		self.enemies = enemies
-		self.view = view
 		self.player = player
 		self.stage = stage
+		self.sounds = sounds
+
+		self.falling = False
+		self.dead = False
+		self.last_hit_by = None
 
 		if 'clip' in attributes:
-			self.clip = attributes['clip']
+			clip = attributes['clip']
 		else:
-			self.clip = self.get_default_clip()
+			clip = self.get_default_clip()
 
 		if 'gravity' in attributes:
-			self.gravity = attributes['gravity']
+			gravity = attributes['gravity']
 		else:
-			self.gravity = self.get_default_gravity()
+			gravity = self.get_default_gravity()
 
 		if 'direction' in attributes:
 			self.direction = attributes['direction']
@@ -101,11 +103,11 @@ class Enemy(Entity):
 
 		if moving:
 			if self.direction == 1:
-				self.velocity = Vector2(self.move_speed_x, 0)
+				velocity = Vector2(self.move_speed_x, 0)
 			elif self.direction == 0:
-				self.velocity = Vector2(-self.move_speed_x, 0)
+				velocity = Vector2(-self.move_speed_x, 0)
 		else:
-			self.velocity = Vector2(0, 0)
+			velocity = Vector2(0, 0)
 
 		if 'hit_points' in attributes:
 			self.hit_points = attributes['hit_points']
@@ -127,21 +129,12 @@ class Enemy(Entity):
 		else:
 			self.zone = None
 
-		self.sounds = sounds
-
-		self.reset_animation = False
-		self.current_time = 0
-
-		self.falling = False
-		self.dead = False
-		self.last_hit_by = None
-
-		self.load_sprites()
+		super().__init__(view=view, spritesheet=spritesheet, velocity=velocity, gravity=gravity, clip=clip)
 
 		self.start_position = Vector2(position[0] + (self.get_width() / 2), position[1] + (self.get_height() / 2))
 		self.position = Vector2(position[0] + (self.get_width() / 2), position[1] + (self.get_height() / 2))
 
-		print("SPAWN: %s direction=%d"%(self.name, self.direction))
+		print("SPAWN: %s direction=%d position=%r velocity=%r"%(self.name, self.direction, self.position, self.velocity))
 
 	def get_default_clip(self):
 		return False
@@ -169,9 +162,6 @@ class Enemy(Entity):
 
 	def get_default_points(self):
 		return 500
-
-	def load_sprites(self):
-		pass
 
 	def get_name(self):
 		return self.name
@@ -209,34 +199,31 @@ class Enemy(Entity):
 	def get_random_loot_type(self, number):
 		if number > 2 and number < 50:
 			return 'redbonus'
-		elif number <= 2:
+		elif number >= 20 and number <= 22:
 			return 'extralife'
 
 		return None
-
-	def die(self):
-		self.dead = True
 
 	def react(self, delta):
 		pass
 
 	def update_status(self):
-		if self.hit_points <= 0:
+		if self.hit_points <= 0 and not self.dead:
 			if self.last_hit_by is not None:
 				self.last_hit_by.add_points(self.points)
 			self.enemies.explode(self)
-			self.die()
-
+			self.enemies.kill(self)
+			self.dead = True
 
 	def check_off_screen(self):
 		pass
 
 	def update(self, delta):
 		self.react(delta)
-		self.update_position(delta)
 		self.update_status()
 		self.check_off_screen()
 
+		super().update(delta)
 
 class Heli(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
@@ -250,6 +237,7 @@ class Heli(Enemy):
 		self.swoop_cooldown_time = 0
 
 		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes)
+
 
 	def get_default_clip(self):
 		return True
@@ -316,7 +304,11 @@ class Heli(Enemy):
 			elif player.get_top() > y and abs(x - p.x) < 25: # player below
 				self.swoop_down(p.y)
 
-	def update(self, delta):
+	def update_state(self, delta):
+		if self.dead:
+			self.enemies.kill(self)
+			return
+
 		if self.swooping:
 			v = self.velocity
 			y = self.position.y
@@ -333,76 +325,49 @@ class Heli(Enemy):
 		elif self.swoop_cooling_down:
 			self.swoop_cooldown_time += delta
 
-		super().update(delta)
-
-		if self.dead:
-			self.enemies.kill(self)
-		else:
-			animation = self.animations['move_right'] if self.direction == 1 else self.animations['move_left']
-
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
-
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
-
-			p = self.position
-			view = self.view
-			offset = view.get_offset()
-			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
+		self.animation_state = 'move_right' if self.direction == 1 else 'move_left'
 
 class BlueHeli(Heli):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			move_left=Animation([
-				dict(duration=0.05, image=image_at(Rect((376, 329), (16, 20)), -1)),
-				dict(duration=0.05, image=image_at(Rect((416, 329), (16, 20)), -1)),
-			]),
-			move_right=Animation([
-				dict(duration=0.05, image=image_at(Rect((376, 329), (16, 20)), -1, flip='x')),
-				dict(duration=0.05, image=image_at(Rect((416, 329), (16, 20)), -1, flip='x')),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				move_left = [
+					dict(at=(376, 329), size=(16, 20), duration=0.05),
+					dict(at=(416, 329), size=(16, 20), duration=0.05),
+				],
+				move_right = [
+					dict(at=(376, 329), size=(16, 20), duration=0.05, flip='x'),
+					dict(at=(416, 329), size=(16, 20), duration=0.05, flip='x'),
+				]
+			),
+			default = 'move_right' if self.direction == 1 else 'move_left'
 		)
-
-		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class GreenHeli(Heli):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			move_left=Animation([
-				dict(duration=0.05, image=image_at(Rect((296, 329), (16, 20)), -1)),
-				dict(duration=0.05, image=image_at(Rect((336, 329), (16, 20)), -1)),
-			]),
-			move_right=Animation([
-				dict(duration=0.05, image=image_at(Rect((292, 326), (16, 20)), -1, flip='x')),
-				dict(duration=0.05, image=image_at(Rect((336, 329), (16, 20)), -1, flip='x')),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				move_left = [
+					dict(at=(296, 329), size=(16, 20), duration=0.05),
+					dict(at=(336, 329), size=(16, 20), duration=0.05),
+				],
+				move_right = [
+					dict(at=(292, 329), size=(16, 20), duration=0.05, flip='x'),
+					dict(at=(336, 329), size=(16, 20), duration=0.05, flip='x'),
+				]
+			),
+			default = 'move_right' if self.direction == 1 else 'move_left'
 		)
-
-		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class ScrewDriver(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
-		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 		self.active = False
 		self.deactivating = False
 		self.pellet_speed = 1
 		self.shots = 0
 		self.cooldown_time = 0
+
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 
 	def get_default_hit_points(self):
 		return 3
@@ -462,90 +427,74 @@ class ScrewDriver(Enemy):
 		if abs(pos.x - ppos.x) <= 75 and not self.active and not self.deactivating:
 			self.activate()
 
-	def update(self, delta):
-		super().update(delta)
-
+	def update_state(self, delta):
 		if self.cooldown_time > 0:
 			self.cooldown_time -= delta
 
-		if self.dead:
-			self.enemies.kill(self)
+		if self.active:
+			self.animation_state = 'active_down' if self.direction == 1 else 'active_up'
 		else:
-			if self.active:
-				inactive_offset = 0
-				animation = self.animations['active_down'] if self.direction == 1 else self.animations['active_up']
-			else:
-				inactive_offset = -1 if self.direction == 1 else 9
-				animation = self.animations['inactive_down'] if self.direction == 1 else self.animations['inactive_up']
+			self.animation_state = 'inactive_down' if self.direction == 1 else 'inactive_up'
 
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
+	def update_sprite(self, delta):
+		super().update_sprite(delta)
 
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
+		if self.active:
+			offset = 0
+		else:
+			offset = -1 if self.direction == 1 else 9
 
-			p = self.position
-			view = self.view
-			offset = view.get_offset()
-			self.rect.center = int(p.x - offset.x), int(p.y - offset.y + inactive_offset)
+		self.rect.center = self.rect.center[0], self.rect.center[1] + offset
 
 class OrangeScrewDriver(ScrewDriver):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			active_up=Animation([
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1), callback=self.shoot),
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1), callback=self.deactivate),
-			]),
-			inactive_up=Animation([
-				dict(duration=0.1, image=image_at(Rect((416, 95), (16, 8)), colorkey=-1)),
-			]),
-			active_down=Animation([
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y'), callback=self.shoot),
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((296, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((335, 91), (16, 16)), colorkey=-1, flip='y')),
-				dict(duration=0.1, image=image_at(Rect((376, 91), (16, 16)), colorkey=-1, flip='y'), callback=self.deactivate),
-			]),
-			inactive_down=Animation([
-				dict(duration=0.1, image=image_at(Rect((416, 95), (16, 8)), colorkey=-1, flip='y')),
-			]),
-		)
-
 		self.pellet_image = image_at(Rect((281, 96), (6, 6)), colorkey=-1)
+		super().load_sprites()
 
-		start_frame = self.animations['inactive_down'].current() if self.direction == 1 else self.animations['inactive_up'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
-
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				active_up = [
+					dict(at=(296, 91), size=(16, 16), duration=0.1),
+					dict(at=(335, 91), size=(16, 16), duration=0.1),
+					dict(at=(376, 91), size=(16, 16), duration=0.1),
+					dict(at=(296, 91), size=(16, 16), duration=0.1),
+					dict(at=(335, 91), size=(16, 16), duration=0.1),
+					dict(at=(376, 91), size=(16, 16), duration=0.1, callback=self.shoot),
+					dict(at=(296, 91), size=(16, 16), duration=0.1),
+					dict(at=(335, 91), size=(16, 16), duration=0.1),
+					dict(at=(376, 91), size=(16, 16), duration=0.1),
+					dict(at=(296, 91), size=(16, 16), duration=0.1),
+					dict(at=(335, 91), size=(16, 16), duration=0.1),
+					dict(at=(376, 91), size=(16, 16), duration=0.1, callback=self.deactivate)
+				],
+				inactive_up = [
+					dict(at=(416, 95), size=(16,8), duration=0.1),
+				],
+				active_down = [
+					dict(at=(296, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(335, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(376, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(296, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(335, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(376, 91), size=(16, 16), duration=0.1, flip='y', callback=self.shoot),
+					dict(at=(296, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(335, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(376, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(296, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(335, 91), size=(16, 16), duration=0.1, flip='y'),
+					dict(at=(376, 91), size=(16, 16), duration=0.1, flip='y', callback=self.deactivate)
+				],
+				inactive_down = [
+					dict(at=(416, 95), size=(16,8), duration=0.1, flip='y'),
+				],
+			),
+			default = 'inactive_down' if self.direction == 1 else 'inactive_up'
+		)
 
 class Blaster(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
-		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 		self.active = False
 		self.deactivating = False
 		self.shooting = False
@@ -555,6 +504,8 @@ class Blaster(Enemy):
 		self.shot_frequency = 0.75
 		self.max_shots = 4
 		self.pellet_speed = 1
+
+		super().__init__(name, spritesheet, view, sounds, enemies, player, stage, position[0], position[1], **attributes)
 
 	def get_default_hit_points(self):
 		return 1
@@ -637,117 +588,134 @@ class Blaster(Enemy):
 			if not self.view.in_view(pew.get_rect()):
 				pew.kill()
 
-	def update(self, delta):
-		super().update(delta)
-
+	def update_state(self, delta):
 		if self.dead:
-			self.enemies.kill(self)
+			return
+
+		if self.active:
+			self.animation_state = 'shoot_right' if self.direction == 1 else 'shoot_left'
+
+			if self.shooting:
+				self.shoot_time += delta
+
+				if self.shots_fired == 0 or self.shoot_time >= self.shot_frequency:
+					self.shoot()
+
+				if self.shots_fired == self.max_shots:
+					self.stop_shooting()
 		else:
-			if self.active:
-				animation = self.animations['shoot_right'] if self.direction == 1 else self.animations['shoot_left']
-
-				if self.shooting:
-					self.shoot_time += delta
-
-					if self.shots_fired == 0 or self.shoot_time >= self.shot_frequency:
-						self.shoot()
-
-					if self.shots_fired == self.max_shots:
-						self.stop_shooting()
-			else:
-				animation = self.animations['still_right'] if self.direction == 1 else self.animations['still_left']
-
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
-
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
-
-			p = self.position
-			view = self.view
-			offset = view.get_offset()
-			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
+			self.animation_state = 'still_right' if self.direction == 1 else 'still_left'
 
 class BlueBlaster(Blaster):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
+		self.pellet_image = image_at(Rect((281, 296), (6, 6)), colorkey=-1)
+		super().load_sprites()
 
-		self.animations = dict(
-			shoot_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1), callback=self.set_closed),
-				dict(duration=0.1, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1), callback=self.set_open),
-				dict(duration=0.1, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1)),
-				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), colorkey=-1), callback=self.start_shooting),
-				dict(duration=0.1, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1)),
-				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1), callback=self.close_and_deactivate),
-			]),
-			shoot_right=Animation([
-				dict(duration=1.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.set_closed),
-				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.set_open),
-				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip='x')),
-				dict(duration=3.5, image=image_at(Rect((295, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.start_shooting),
-				dict(duration=0.25, image=image_at(Rect((332, 291), (16, 16)), colorkey=-1, flip='x')),
-				dict(duration=0.25, image=image_at(Rect((372, 291), (16, 16)), colorkey=-1, flip='x')),
-				dict(duration=0.5, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip='x'), callback=self.close_and_deactivate),
-			]),
-			still_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1)),
-			]),
-			still_right=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 291), (16, 16)), colorkey=-1, flip='x')),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				shoot_left = [
+					dict(at=(412, 291), size=(16, 16), duration=1.5, callback=self.set_closed),
+					dict(at=(372, 291), size=(16, 16), duration=0.25, callback=self.set_open),
+					dict(at=(332, 291), size=(16, 16), duration=0.25),
+					dict(at=(295, 291), size=(16, 16), duration=3.5, callback=self.start_shooting),
+					dict(at=(332, 291), size=(16, 16), duration=0.25),
+					dict(at=(372, 291), size=(16, 16), duration=0.25),
+					dict(at=(412, 291), size=(16, 16), duration=0.5, callback=self.close_and_deactivate),
+				],
+				shoot_right = [
+					dict(at=(412, 291), size=(16, 16), duration=1.5, flip='x', callback=self.set_closed),
+					dict(at=(372, 291), size=(16, 16), duration=0.25, flip='x', callback=self.set_open),
+					dict(at=(332, 291), size=(16, 16), duration=0.25, flip='x',),
+					dict(at=(295, 291), size=(16, 16), duration=3.5, flip='x', callback=self.start_shooting),
+					dict(at=(332, 291), size=(16, 16), duration=0.25, flip='x',),
+					dict(at=(372, 291), size=(16, 16), duration=0.25, flip='x',),
+					dict(at=(412, 291), size=(16, 16), duration=0.5, flip='x', callback=self.close_and_deactivate),
+				],
+				still_left = [
+					dict(at=(412, 291), size=(16, 16), duration=1.0),
+				],
+				still_right = [
+					dict(at=(412, 291), size=(16, 16), duration=1.0, flip='x'),
+				]
+			),
+			default = 'still_right' if self.direction == 1 else 'still_left'
 		)
-
-		self.pellet_image = image_at(Rect((281, 296), (6, 6)), -1)
-
-		start_frame = self.animations['still_right'].current() if self.direction == 1 else  self.animations['still_left'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class RedBlaster(Blaster):
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
+		self.pellet_image = image_at(Rect((281, 256), (6, 6)), colorkey=-1)
+		super().load_sprites()
 
-		# TODO: Fix animation glitch
-		self.animations = dict(
-			shoot_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1), callback=self.set_closed),
-				dict(duration=0.1, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1), callback=self.set_open),
-				dict(duration=0.1, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1)),
-				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), colorkey=-1), callback=self.start_shooting),
-				dict(duration=0.1, image=image_at(Rect((332	,251), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1)),
-				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1), callback=self.close_and_deactivate),
-			]),
-			shoot_right=Animation([
-				dict(duration=1.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.set_closed),
-				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.set_open),
-				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip='x')),
-				dict(duration=3.5, image=image_at(Rect((295, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.start_shooting),
-				dict(duration=0.25, image=image_at(Rect((332, 251), (16, 16)), colorkey=-1, flip='x')),
-				dict(duration=0.25, image=image_at(Rect((372, 251), (16, 16)), colorkey=-1, flip='x')),
-				dict(duration=0.5, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip='x'), callback=self.close_and_deactivate),
-			]),
-			still_left=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1)),
-			]),
-			still_right=Animation([
-				dict(duration=1.0, image=image_at(Rect((412, 251), (16, 16)), colorkey=-1, flip='x')),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				shoot_left = [
+					dict(at=(412, 251), size=(16, 16), duration=1.5, callback=self.set_closed),
+					dict(at=(332, 251), size=(16, 16), duration=0.25, callback=self.set_open),
+					dict(at=(372, 251), size=(16, 16), duration=0.25),
+					dict(at=(295, 251), size=(16, 16), duration=3.5, callback=self.start_shooting),
+					dict(at=(372, 251), size=(16, 16), duration=0.25),
+					dict(at=(332, 251), size=(16, 16), duration=0.25),
+					dict(at=(412, 251), size=(16, 16), duration=0.5, callback=self.close_and_deactivate),
+				],
+				shoot_right = [
+					dict(at=(412, 251), size=(16, 16), duration=1.5, flip='x', callback=self.set_closed),
+					dict(at=(332, 251), size=(16, 16), duration=0.25, flip='x', callback=self.set_open),
+					dict(at=(372, 251), size=(16, 16), duration=0.25, flip='x'),
+					dict(at=(295, 251), size=(16, 16), duration=3.5, flip='x', callback=self.start_shooting),
+					dict(at=(372, 251), size=(16, 16), duration=0.25, flip='x'),
+					dict(at=(332, 251), size=(16, 16), duration=0.25, flip='x'),
+					dict(at=(412, 251), size=(16, 16), duration=0.5, flip='x', callback=self.close_and_deactivate),
+				],
+				still_left = [
+					dict(at=(412, 251), size=(16,16), duration=1.0),
+				],
+				still_right = [
+					dict(at=(412, 251), size=(16,16), duration=1.0, flip='x'),
+				]
+			),
+			default = 'still_right' if self.direction == 1 else 'still_left'
 		)
 
-		self.pellet_image = image_at(Rect((281, 256), (6, 6)), -1)
+class OrangeBlaster(Blaster):
+	def load_sprites(self):
+		image_at = self.spritesheet.image_at
+		self.pellet_image = image_at(Rect((281, 216), (6, 6)), colorkey=-1)
+		super().load_sprites()
 
-		start_frame = self.animations['still_right'].current() if self.direction == 1 else self.animations['still_left'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				shoot_left = [
+					dict(at=(412, 211), size=(16, 16), duration=1.5, callback=self.set_closed),
+					dict(at=(372, 211), size=(16, 16), duration=0.25, callback=self.set_open),
+					dict(at=(332, 211), size=(16, 16), duration=0.25),
+					dict(at=(295, 211), size=(16, 16), duration=3.5, callback=self.start_shooting),
+					dict(at=(332, 211), size=(16, 16), duration=0.25),
+					dict(at=(372, 211), size=(16, 16), duration=0.25),
+					dict(at=(412, 211), size=(16, 16), duration=0.5, callback=self.close_and_deactivate),
+				],
+				shoot_right = [
+					dict(at=(412, 211), size=(16, 16), duration=1.5, flip='x', callback=self.set_closed),
+					dict(at=(372, 211), size=(16, 16), duration=0.25, flip='x', callback=self.set_open),
+					dict(at=(332, 211), size=(16, 16), duration=0.25, flip='x',),
+					dict(at=(295, 211), size=(16, 16), duration=3.5, flip='x', callback=self.start_shooting),
+					dict(at=(332, 211), size=(16, 16), duration=0.25, flip='x',),
+					dict(at=(372, 211), size=(16, 16), duration=0.25, flip='x',),
+					dict(at=(412, 211), size=(16, 16), duration=0.5, flip='x', callback=self.close_and_deactivate),
+				],
+				still_left = [
+					dict(at=(412, 211), size=(16,16), duration=1.0),
+				],
+				still_right = [
+					dict(at=(412, 211), size=(16,16), duration=1.0, flip='x'),
+				]
+			),
+			default = 'still_right' if self.direction == 1 else 'still_left'
+		)
 
 class Cutter(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
@@ -778,23 +746,20 @@ class Cutter(Enemy):
 	def get_default_damage(self):
 		return 8
 
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			move_left=Animation([
-				dict(duration=0.1, image=image_at(Rect((216, 9), (16, 20)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((176, 12), (16, 20)), colorkey=-1)),
-			]),
-			move_right=Animation([
-				dict(duration=0.1, image=image_at(Rect((216, 9), (16, 20)), colorkey=-1, flip='x')),
-				dict(duration=0.1, image=image_at(Rect((176, 12), (16, 20)), colorkey=-1, flip='x')),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				move_left = [
+					dict(at=(216, 9), size=(16,20), duration=0.1),
+					dict(at=(176, 12), size=(16,20), duration=0.1),
+				],
+				move_right = [
+					dict(at=(216, 9), size=(16,20), duration=0.1, flip='x'),
+					dict(at=(176, 12), size=(16,20), duration=0.1, flip='x'),
+				],
+			),
+			default = 'move_right' if self.direction == 1 else 'move_left'
 		)
-
-		start_frame = self.animations['move_right'].current() if self.direction == 1 else  self.animations['move_left'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 	def jump(self, angle, target, delta):
 		self.jumping = True
@@ -828,28 +793,8 @@ class Cutter(Enemy):
 				self.position.x = start_x + int(displacement_x)
 				self.position.y = start_y - int(displacement_y)
 
-	def update(self, delta):
-		super().update(delta)
-
-		if self.dead:
-			self.enemies.kill(self)
-		else:
-			animation = self.animations['move_right'] if self.direction == 1 else self.animations['move_left']
-
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
-
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
-
-			offset = self.view.get_offset()
-			self.rect.center = int(self.position.x - offset.x), int(self.position.y - offset.y)
+	def update_state(self, delta):
+		self.animation_state = 'move_right' if self.direction == 1 else 'move_left'
 
 class Flea(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
@@ -900,66 +845,38 @@ class Flea(Enemy):
 		elif p.x > x:
 			self.direction = 1
 
-	def update(self, delta):
-		super().update(delta)
-
-		if self.dead:
-			self.enemies.kill(self)
-		else:
-			animation = self.animations['compressed'] if self.compressed else self.animations['uncompressed']
-
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
-
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
-
-			p = self.position
-			view = self.view
-			offset = view.get_offset()
-			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
+	def update_state(self, delta):
+		self.animation_state = 'compressed' if self.compressed else 'uncompressed'
 
 class BlueFlea(Flea):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			compressed=Animation([
-				dict(duration=0.75, image=image_at(Rect((137, 165), (14, 19)), colorkey=-1)),
-				dict(duration=0.5, image=image_at(Rect((137, 165), (14, 19)), colorkey=-1), callback=self.jump),
-			]),
-			uncompressed=Animation([
-				dict(duration=0.1, image=image_at(Rect((177, 169), (14, 19)), colorkey=-1)),
-			]),
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				compressed = [
+					dict(at=(137, 165), size=(14, 19), duration=0.75),
+					dict(at=(137, 165), size=(14, 19), duration=0.5, callback=self.jump),
+				],
+				uncompressed = [
+					dict(at=(177, 169), size=(14, 19), duration=0.75),
+				],
+			),
+			default = 'uncompressed'
 		)
-
-		start_frame = self.animations['uncompressed'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class RedFlea(Flea):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			compressed=Animation([
-				dict(duration=0.75, image=image_at(Rect((137, 125), (14, 19)), colorkey=-1)),
-				dict(duration=0.5, image=image_at(Rect((137, 125), (14, 19)), colorkey=-1), callback=self.jump),
-			]),
-			uncompressed=Animation([
-				dict(duration=0.1, image=image_at(Rect((177, 129), (14, 19)), colorkey=-1)),
-			]),
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				compressed = [
+					dict(at=(137, 125), size=(14, 19), duration=0.75),
+					dict(at=(137, 125), size=(14, 19), duration=0.5, callback=self.jump),
+				],
+				uncompressed = [
+					dict(at=(177, 129), size=(14, 19), duration=0.75),
+				],
+			),
+			default = 'uncompressed'
 		)
-
-		start_frame = self.animations['uncompressed'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class OctoBattery(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
@@ -989,6 +906,9 @@ class OctoBattery(Enemy):
 
 	def get_default_damage(self):
 		return 8
+
+	def get_random_loot_type(self, number):
+		return None
 
 	def collide_bottom(self, y):
 		super().collide_bottom(y)
@@ -1048,93 +968,78 @@ class OctoBattery(Enemy):
 		self.accelerate(x_speed, y_speed)
 		self.start_opening()
 
-	def update(self, delta):
-		super().update(delta)
-
-		if self.dead:
-			self.enemies.kill(self)
+	def update_state(self, delta):
+		if self.opening:
+			self.animation_state = 'opening'
+		elif self.closing:
+			self.animation_state = 'closing'
+		elif self.open:
+			self.animation_state = 'open'
 		else:
-			if self.opening:
-				animation = self.animations['opening']
-			elif self.closing:
-				animation = self.animations['closing']
-			elif self.open:
-				animation = self.animations['open']
-			else:
-				animation = self.animations['closed']
-
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
-
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
-
-			p = self.position
-			view = self.view
-			offset = view.get_offset()
-			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
+			self.animation_state = 'closed'
 
 class RedOctoBattery(OctoBattery):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			closed=Animation([
-				dict(duration=2, image=image_at(Rect((96, 131), (16, 16)), colorkey=-1)),
-				dict(duration=2, image=image_at(Rect((96, 131), (16, 16)), colorkey=-1), callback=self.move),
-			]),
-			opening=Animation([
-				dict(duration=0.5, image=image_at(Rect((57, 131), (16, 16)), colorkey=-1), callback=self.open_eye),
-			]),
-			closing=Animation([
-				dict(duration=0.5, image=image_at(Rect((57, 131), (16, 16)), colorkey=-1), callback=self.close_eye),
-			]),
-			open=Animation([
-				dict(duration=0.1, image=image_at(Rect((16, 131), (16, 16)), colorkey=-1)),
-			]),
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				closed = [
+					dict(at=(96, 131), size=(16, 16), duration=2),
+					dict(at=(96, 131), size=(16, 16), duration=2, callback=self.move),
+				],
+				opening = [
+					dict(at=(57, 131), size=(16, 16), duration=0.5, callback=self.open_eye),
+				],
+				closing = [
+					dict(at=(57, 131), size=(16, 16), duration=0.5, callback=self.close_eye),
+				],
+				open = [
+					dict(at=(16, 131), size=(16, 16), duration=0.5),
+				],
+			),
+			default = 'closed'
 		)
-
-		start_frame = self.animations['closed'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class BlueOctoBattery(OctoBattery):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=0.1, image=image_at(Rect((16, 171), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((57, 171), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((96, 171), (16, 16)), colorkey=-1)),
-			]),
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				closed = [
+					dict(at=(96, 171), size=(16, 16), duration=2),
+					dict(at=(96, 171), size=(16, 16), duration=2, callback=self.move),
+				],
+				opening = [
+					dict(at=(57, 131), size=(16, 16), duration=0.5, callback=self.open_eye),
+				],
+				closing = [
+					dict(at=(57, 171), size=(16, 16), duration=0.5, callback=self.close_eye),
+				],
+				open = [
+					dict(at=(16, 171), size=(16, 16), duration=0.5),
+				],
+			),
+			default = 'closed'
 		)
-
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class OrangeOctoBattery(OctoBattery):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=0.1, image=image_at(Rect((16, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((57, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.1, image=image_at(Rect((96, 91), (16, 16)), colorkey=-1)),
-			]),
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				closed = [
+					dict(at=(96, 91), size=(16, 16), duration=2),
+					dict(at=(96, 91), size=(16, 16), duration=2, callback=self.move),
+				],
+				opening = [
+					dict(at=(57, 91), size=(16, 16), duration=0.5, callback=self.open_eye),
+				],
+				closing = [
+					dict(at=(57, 91), size=(16, 16), duration=0.5, callback=self.close_eye),
+				],
+				open = [
+					dict(at=(16, 91), size=(16, 16), duration=0.5),
+				],
+			),
+			default = 'closed'
 		)
-
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class Mambu(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
@@ -1159,21 +1064,21 @@ class Mambu(Enemy):
 
 	def load_sprites(self):
 		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=1, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1)),
-				dict(duration=0.5, image=image_at(Rect((136, 91), (16, 16)), colorkey=-1), callback=self.stop),
-				dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.shoot),
-				dict(duration=0.5, image=image_at(Rect((176, 88), (17, 21)), colorkey=-1), callback=self.move),
-			])
-		)
-
 		self.pellet_image = image_at(Rect((121, 96), (6, 6)), -1)
+		super().load_sprites()
 
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(136, 91), size=(16, 16), duration=1),
+					dict(at=(136, 91), size=(16, 16), duration=0.5, callback=self.stop),
+					dict(at=(176, 88), size=(17, 21), duration=0.5, callback=self.shoot),
+					dict(at=(176, 88), size=(17, 21), duration=0.5, callback=self.move),
+				],
+			),
+			default = 'default'
+		)
 
 	def stop(self):
 		self.velocity.x = 0
@@ -1198,31 +1103,6 @@ class Mambu(Enemy):
 		else:
 			super().hit(pew, entity)
 
-	def update(self, delta):
-		super().update(delta)
-
-		if self.dead:
-			self.enemies.kill(self)
-		else:
-			animation = self.animations['default']
-
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
-
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
-
-			p = self.position
-			view = self.view
-			offset = view.get_offset()
-			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
-
 class BigEye(Enemy):
 	def __init__(self, name, spritesheet, view, sounds, enemies, player, stage, *position, **attributes):
 		self.normal_jump_speed = 4
@@ -1243,7 +1123,7 @@ class BigEye(Enemy):
 		return 1
 
 	def get_default_hit_points(self):
-		return 16
+		return 24
 
 	def get_default_damage(self):
 		return 14
@@ -1280,64 +1160,40 @@ class BigEye(Enemy):
 		elif p.x > x:
 			self.direction = 1
 
-	def update(self, delta):
-		super().update(delta)
-
-		if self.dead:
-			self.enemies.kill(self)
+	def update_state(self, delta):
+		if self.compressed:
+			self.animation_state = 'compressed_right' if self.direction == 1 else 'compressed_left'
 		else:
-			if self.compressed:
-				animation = self.animations['compressed_right'] if self.direction == 1 else self.animations['compressed_left']
-			else:
-				animation = self.animations['uncompressed_right'] if self.direction == 1 else self.animations['uncompressed_left']
-
-			if self.reset_animation:
-				animation.reset()
-				self.reset_animation = False
-
-			self.current_time += delta
-			if self.current_time >= animation.next_time:
-				prev_center = self.rect.center
-				self.image = animation.next(0)['image']
-				self.rect.width = self.image.get_rect().width
-				self.rect.center = prev_center
-				self.current_time = 0
-
-			p = self.position
-			view = self.view
-			offset = view.get_offset()
-			self.rect.center = int(p.x - offset.x), int(p.y - offset.y)
+			self.animation_state = 'uncompressed_right' if self.direction == 1 else 'uncompressed_left'
 
 class RedBigEye(BigEye):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			compressed_left=Animation([
-				dict(duration=0.75, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1)),
-				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1), callback=self.jump),
-			]),
-			compressed_right=Animation([
-				dict(duration=0.75, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip='x')),
-				dict(duration=0.5, image=image_at(Rect((88, 201), (32, 48)), colorkey=-1, flip='x'), callback=self.jump),
-			]),
-			uncompressed_left=Animation([
-				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1)),
-			]),
-			uncompressed_right=Animation([
-				dict(duration=0.1, image=image_at(Rect((88, 265), (32, 48)), colorkey=-1, flip='x')),
-			]),
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				compressed_left = [
+					dict(at=(88, 201), size=(32, 48), duration=0.75),
+					dict(at=(88, 201), size=(32, 48), duration=0.5, callback=self.jump),
+				],
+				compressed_right = [
+					dict(at=(88, 201), size=(32, 48), duration=0.75, flip='x'),
+					dict(at=(88, 201), size=(32, 48), duration=0.5, flip='x', callback=self.jump),
+				],
+				uncompressed_left = [
+					dict(at=(88, 265), size=(32, 48), duration=0.1),
+				],
+				uncompressed_right = [
+					dict(at=(88, 265), size=(32, 48), duration=0.1, flip='x'),
+				],
+			),
+			default = 'uncompressed_right' if self.direction == 1 else 'uncompressed_left'
 		)
-
-		start_frame = self.animations['uncompressed_right'].current() if self.direction == 1 else self.animations['uncompressed_left'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 ENEMY_CLASS=dict(
 	blueheli = BlueHeli,
 	greenheli = GreenHeli,
 	bluebblaster = BlueBlaster,
 	redblaster = RedBlaster,
+	orangeblaster = OrangeBlaster,
 	cutter = Cutter,
 	blueflea = BlueFlea,
 	redflea = RedFlea,

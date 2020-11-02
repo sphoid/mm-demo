@@ -533,6 +533,9 @@ class Game:
 			player.jump()
 
 	def player_start_shoot(self):
+		if not self.player.is_moveable():
+			return
+
 		pew = self.player.shoot()
 		self.sprites.add(pew)
 

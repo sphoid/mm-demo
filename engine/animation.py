@@ -20,7 +20,7 @@ class Animation:
 		next_frame = self.frames[self.index]
 		self.next_time = next_frame['duration'] + last_time
 
-		if 'callback' in next_frame:
+		if 'callback' in next_frame and next_frame['callback'] is not None:
 			next_frame['callback']()
 
 		return next_frame

@@ -5,76 +5,39 @@ from .entity import *
 
 class Item(Entity):
 	def __init__(self, spritesheet, view, sounds, *position):
-		super().__init__()
-		self.spritesheet = spritesheet
 		self.sounds = sounds
-		self.position = Vector2(position[0], position[1])
-		self.view = view
-		self.current_time = 0
-		self.animation = None
 
-		self.gravity = True
-
-		self.reset_animation = False
-
-		self.load_sprites()
-
-	def load_sprites(self):
-		pass
+		super().__init__(spritesheet=spritesheet, view=view, position=(position[0], position[1]), gravity=True)
 
 	def use(self, player):
 		pass
 
-	def update(self, delta):
-		self.update_position(delta)
-
-		self.current_time += delta
-		if self.current_time >= self.animation.next_time:
-			prev_center = self.rect.center
-			self.image = self.animation.next(0)['image']
-			self.rect.width = self.image.get_rect().width
-			self.rect.center = prev_center
-			self.current_time = 0
-
-		p = self.position
-		view = self.view
-		offset = view.get_offset()
-		self.rect.topleft = int(p.x - offset.x), int(p.y - offset.y)
-
 class BigHealth(Item):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=2, image=image_at(Rect((51, 5), (16, 16)), alpha=True)),
-				dict(duration=0.25, image=image_at(Rect((33, 5), (16, 16)), alpha=True))
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(51, 5), size=(16, 16), duration=2, alpha=True),
+					dict(at=(33, 5), size=(16, 16), duration=0.25, alpha=True),
+				],
+			),
+			default = 'default'
 		)
-
-		self.animation = self.animations['default']
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 	def use(self, player):
 		player.heal(14)
 		self.kill()
 
 class SmallHealth(Item):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=2, image=image_at(Rect((2, 5), (16, 16)), alpha=True)),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(2, 5), size=(16, 16), duration=2, alpha=True),
+				],
+			),
+			default = 'default'
 		)
-
-		self.animation = self.animations['default']
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 	def use(self, player):
 		player.heal(6)
@@ -86,81 +49,59 @@ class BonusPoint(Item):
 		self.kill()
 
 class RedBonusPoint(BonusPoint):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=2, image=image_at(Rect((5, 35), (8, 8)), alpha=True)),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(5, 35), size=(8, 8), duration=2, alpha=True),
+				],
+			),
+			default = 'default'
 		)
-
-		self.animation = self.animations['default']
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
-
 
 class BlueBonusPoint(BonusPoint):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=2, image=image_at(Rect((17, 35), (8, 8)), alpha=True)),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(17, 35), size=(8, 8), duration=2, alpha=True),
+				],
+			),
+			default = 'default'
 		)
-
-		self.animation = self.animations['default']
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class GreenBonusPoint(BonusPoint):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=2, image=image_at(Rect((29, 35), (8, 8)), alpha=True)),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(29, 35), size=(8, 8), duration=2, alpha=True),
+				],
+			),
+			default = 'default'
 		)
-
-		self.animation = self.animations['default']
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 class OrangeBonusPoint(BonusPoint):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=2, image=image_at(Rect((41, 35), (8, 8)), alpha=True)),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(41, 35), size=(8, 8), duration=2, alpha=True),
+				],
+			),
+			default = 'default'
 		)
-
-		self.animation = self.animations['default']
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
-
 
 class ExtraLife(Item):
-	def load_sprites(self):
-		image_at = self.spritesheet.image_at
-
-		self.animations = dict(
-			default=Animation([
-				dict(duration=2, image=image_at(Rect((193, 26), (16, 16)), alpha=True)),
-			])
+	def get_animation_states(self):
+		return dict(
+			states=dict(
+				default = [
+					dict(at=(193, 26), size=(16, 16), duration=2, alpha=True),
+				],
+			),
+			default = 'default'
 		)
-
-		self.animation = self.animations['default']
-		start_frame = self.animations['default'].current()
-		self.image = start_frame['image']
-		self.rect = self.image.get_rect()
 
 	def use(self, player):
 		player.add_life()

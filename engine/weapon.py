@@ -54,7 +54,7 @@ class BusterPellet(sprite.Sprite):
 class Weapon:
 	def __init__(self, spritesheet_loader, sounds, player):
 		super().__init__()
-		self.spritesheet_loader = spritesheet_loader
+		self.spritesheet = spritesheet_loader.load(self.get_spritesheet_filename())
 		self.pew_sprite_group = sprite.Group()
 		self.area = Rect(0, 0, int(SCREEN_W / 2), int(SCREEN_H / 2))
 		self.sounds = sounds
@@ -63,9 +63,7 @@ class Weapon:
 		self.load_sprites()
 
 	def load_sprites(self):
-		self.spritesheet = self.spritesheet_loader.load(self.get_spritesheet_filename())
 		image_at = self.spritesheet.image_at
-
 		self.pellet_image = image_at(Rect((3, 2), (8, 6)), colorkey=-1)
 
 	def get_spritesheet_filename(self):
